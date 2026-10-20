@@ -4738,14 +4738,14 @@ viewChangelogVersion version =
                 )
             ]
             :: List.concatMap
-                (sec ->
+                (\sec ->
                     (if sec.title == "" then
                         []
 
                      else
                         [ h3 [] [ text sec.title ] ]
                     )
-                        ++ [ ul [] (List.map (item -> li [] [ text item ]) sec.items) ]
+                        ++ [ ul [] (List.map (\item -> li [] [ text item ]) sec.items) ]
                 )
                 version.sections
         )
