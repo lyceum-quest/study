@@ -44,6 +44,8 @@ main! = |args| {
 	Path.write_utf8!(Path.utf8("${partial}/config.json"), AristosSite.config_json(api))?
 	_ = run!("cp", ["-R", "preload", "${partial}/preload"])?
 	_ = run!("cp", ["-R", "fonts", "${partial}/fonts"])?
+	# The What's new page fetches it.
+	_ = copy!("CHANGELOG.md", "${partial}/CHANGELOG.md")?
 
 	Path.rename!(Path.utf8(partial), Path.utf8(release))?
 	Path.write_utf8!(Path.utf8("${root}/latest"), "${version}\n")?

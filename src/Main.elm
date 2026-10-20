@@ -11,6 +11,7 @@ import Fsrs
 import Html exposing (Html, a, article, aside, button, details, div, footer, h1, h2, h3, header, input, label, li, main_, nav, option, p, section, select, span, summary, table, tbody, td, text, textarea, th, thead, tr, ul)
 import Html.Attributes exposing (attribute, checked, class, classList, disabled, href, id, placeholder, rel, rows, selected, style, target, type_, value)
 import Html.Events exposing (on, onClick, onInput, stopPropagationOn)
+import Changelog
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -39,6 +40,7 @@ type Screen
     | WordScreen String
     | WordReviewScreen String
     | StatsScreen
+    | WhatsNewScreen
 
 
 {-| Every word occurrence across the library (`preload/lemmas.json`, written by the Roc preload tool), for word pages.
@@ -227,6 +229,7 @@ type alias Model =
     , activeEntry : Maybe ManifestEntry
     , requestedWork : Maybe String
     , pendingRoute : Maybe Route
+    , changelog : ChangelogState
     , key : Nav.Key
     , currentPath : String
     , positions : Dict String Int
@@ -329,6 +332,7 @@ type Msg
     | RateWord Fsrs.Rating
     | WordRated String Fsrs.Rating Time.Posix
     | GotLemmaIndex (Result Http.Error LemmaData)
+    | GotChangelog (Result Http.Error String)
     | SetAllWords Bool
     | GoTo String
     | SetTodayScope String
@@ -392,6 +396,7 @@ init _ url key =
                 , activeEntry = Nothing
                 , requestedWork = Nothing
                 , pendingRoute = Nothing
+                , changelog = ChangelogNotLoaded
                 , key = key
                 , currentPath = urlPath url
                 , positions = Dict.empty
@@ -456,6 +461,9 @@ documentTitle model =
 
         ( StatsScreen, _ ) ->
             "Progress · Lyceum Study"
+
+        ( WhatsNewScreen, _ ) ->
+            "What's new · Lyceum Study"
 
         ( WordScreen lemma, _ ) ->
             displayLemma lemma ++ " · Lyceum Study"
@@ -1218,6 +1226,19 @@ updateModel msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
+        GotChangelog result ->
+            ( { model
+                | changelog =
+                    case result of
+                        Ok text ->
+                            ChangelogLoaded (Changelog.parse text)
+
+                        Err _ ->
+                            ChangelogFailed
+              }
+            , Cmd.none
+            )
+
         GotLemmaIndex result ->
             ( { model
                 | lemmaIndex =
@@ -1776,6 +1797,16 @@ applyRoute route model =
         Route.Stats ->
             ( { model | screen = StatsScreen, pendingRoute = Nothing }, Cmd.none )
 
+        Route.WhatsNew ->
+            case model.changelog of
+                ChangelogLoaded _ ->
+                    ( { model | screen = WhatsNewScreen, pendingRoute = Nothing }, Cmd.none )
+
+                _ ->
+                    ( { model | screen = WhatsNewScreen, pendingRoute = Nothing, changelog = ChangelogLoading }
+                    , Http.get { url = "/CHANGELOG.md", expect = Http.expectString GotChangelog }
+                    )
+
         Route.Word name ->
             ( { model | screen = WordScreen name, pendingRoute = Nothing, lemmaIndex = loadingIndex model.lemmaIndex }, loadLemmaIndex model )
 
@@ -1974,6 +2005,9 @@ basePath model =
 
         StatsScreen ->
             Just (Route.toPath Route.Stats)
+
+        WhatsNewScreen ->
+            Just (Route.toPath Route.WhatsNew)
 
 
 pathFor : Model -> Maybe String
@@ -3280,6 +3314,7 @@ viewAppHeader model =
         , nav [ class "global-nav", attribute "aria-label" "Primary navigation" ]
             (navButton "Home" (Navigate Route.Library) (model.screen == LibraryScreen || model.screen == TodayScreen)
                 :: navButton "Progress" (Navigate Route.Stats) (model.screen == StatsScreen)
+                :: navButton "What's new" (Navigate Route.WhatsNew) (model.screen == WhatsNewScreen)
                 :: (case model.activeEntry of
                         Just entry ->
                             [ navButton "Read" (Navigate (Route.Reader entry.id (Just (currentRef model)))) False
@@ -4657,7 +4692,63 @@ view model =
 
             StatsScreen ->
                 viewStats model
+
+            WhatsNewScreen ->
+                viewWhatsNew model.changelog
         ]
+
+
+{-| CHANGELOG.md, fetched when the page is first opened (the release build copies it next to index.html).
+-}
+type ChangelogState
+    = ChangelogNotLoaded
+    | ChangelogLoading
+    | ChangelogLoaded (List Changelog.Version)
+    | ChangelogFailed
+
+
+viewWhatsNew : ChangelogState -> Html Msg
+viewWhatsNew state =
+    section [ class "whats-new" ]
+        (h1 [] [ text "What's new" ]
+            :: (case state of
+                    ChangelogLoaded versions ->
+                        p [ class "whats-new-intro" ] [ text "New texts, features and fixes in Lyceum Study, newest first." ]
+                            :: List.map viewChangelogVersion versions
+
+                    ChangelogFailed ->
+                        [ p [] [ text "The list of changes couldn't be loaded. Check your connection and open this page again." ] ]
+
+                    _ ->
+                        [ p [] [ text "Loading…" ] ]
+               )
+        )
+
+
+viewChangelogVersion : Changelog.Version -> Html Msg
+viewChangelogVersion version =
+    article [ class "whats-new-version" ]
+        (h2 []
+            [ text
+                (if version.name == "Unreleased" then
+                    "Not yet released"
+
+                 else
+                    version.name
+                )
+            ]
+            :: List.concatMap
+                (sec ->
+                    (if sec.title == "" then
+                        []
+
+                     else
+                        [ h3 [] [ text sec.title ] ]
+                    )
+                        ++ [ ul [] (List.map (item -> li [] [ text item ]) sec.items) ]
+                )
+                version.sections
+        )
 
 
 viewSettings : Model -> Html Msg

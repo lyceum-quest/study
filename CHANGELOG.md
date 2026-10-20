@@ -1,0 +1,30 @@
+# Changelog
+
+What's new in Lyceum Study (study.lyceum.quest). The app shows this under What's new, without the Internal sections.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are release dates.
+
+## [Unreleased]
+
+### Added
+
+- The complete Epistle to the Romans (all 16 chapters) and Plato's Crito (the whole dialogue), for reading and study.
+- Sync your progress across devices through your Lyceum account (for supporters).
+- Passage cards replay your earlier attempts at a passage.
+- This What's new page.
+
+### Changed
+
+- Aristos is now called Lyceum Study.
+- A new look, matching Lyceum: Crimson Pro type, parchment and ink, burgundy and gold, a navy header.
+
+### Fixed
+
+- A new device's default settings no longer overwrite the settings saved in your account.
+
+### Internal
+
+- The texts come from Archeion's data releases; Archeion's release-staging pins and stages each one.
+
+## [2026-10-13]
+
+- The first release recorded here. Earlier changes are in the git history.

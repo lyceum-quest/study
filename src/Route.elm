@@ -17,6 +17,7 @@ type Route
     | WordReview String
     | Stats
     | Today
+    | WhatsNew
 
 
 {-| Routes live in the URL fragment (`/#/luke/5?word=7`), so the static server only ever serves `/` and every link or reload works without a server-side fallback.
@@ -61,6 +62,7 @@ parser =
         , Parser.map Settings (s "settings")
         , Parser.map Stats (s "stats")
         , Parser.map Today (s "today")
+        , Parser.map WhatsNew (s "whats-new")
         , Parser.map Word (s "word" </> lemma)
         , Parser.map WordReview (s "review" </> s "word" </> lemma)
         , Parser.map (\work passage -> Reader work (Just passage)) (string </> s "read" </> string)
@@ -101,6 +103,9 @@ toPath route =
 
                 Stats ->
                     "/stats"
+
+                WhatsNew ->
+                    "/whats-new"
 
                 Today ->
                     "/today"

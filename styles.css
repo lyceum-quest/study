@@ -4738,3 +4738,11 @@ a.secondary-button {
   border-color: var(--rose);
   color: var(--ink);
 }
+
+/* What's new (CHANGELOG.md) */
+.whats-new { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+.whats-new-intro { opacity: 0.75; margin-bottom: 2rem; }
+.whats-new-version { margin-bottom: 2rem; }
+.whats-new-version h2 { margin: 0 0 0.6rem; padding-bottom: 0.3rem; border-bottom: 1px solid currentColor; }
+.whats-new-version h3 { margin: 1rem 0 0.3rem; }
+.whats-new-version li { margin: 0.3rem 0; line-height: 1.5; }
