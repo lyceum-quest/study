@@ -1,19 +1,19 @@
-# Aristos deployment
+# Lyceum Study deployment
 
 Live preview: <https://aristos.internal.blu.cx> (tailnet only), served from the
 development machine by `aristos-preview.service` (`elm-live` on
 `127.0.0.1:8092` in the repository root). It needs no deployment: source edits
 recompile automatically and `kai run fetch-preload` installs the pinned data. The committed
 `config.json` points the preview's "Sign in to sync" at the staging account API,
-`https://lyceum.internal.blu.cx`; while that is unreachable Aristos only notes it
+`https://lyceum.internal.blu.cx`; while that is unreachable Lyceum Study only notes it
 on the Progress page.
 
 ## study.lyceum.quest
 
-Aristos is published as a static site on the Lyceum production host, whose
+Lyceum Study is published as a static site on the Lyceum production host, whose
 Caddy serves `ARISTOS_DEPLOY_DIR/current` (default `/var/www/aristos/current`)
 at `study.lyceum.quest`. The vhost is declared in the Lyceum website's
-`flake.nix` (`services.lyceum.staticSites`); deploying Aristos never rebuilds
+`flake.nix` (`services.lyceum.staticSites`); deploying Lyceum Study never rebuilds
 the host.
 
 ### Release
@@ -91,7 +91,7 @@ redeploying it.
 
 ## Data
 
-Aristos generates no data. `preload/` (corpora, passages, and the lemma index)
+Lyceum Study generates no data. `preload/` (corpora, passages, and the lemma index)
 is an [Archeion](https://github.com/lyceum-quest/archeion) release pinned by
 URL and SHA-256 in `preload.lock.json`; `kai run fetch-preload` replaces
 `preload/` with it after checking the checksum. To update the data, release a

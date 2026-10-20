@@ -69,7 +69,7 @@ deploy! = |host, dir, url, target, requested| {
 		Ok(_) => {
 			_ = if links.current != "" point!(host, dir, "previous", links.current)? else {}
 			_ = prune!(host, releases, [version, links.current])?
-			Stdout.line!("Deployed Aristos ${version} to ${url}/ (previous: ${if links.current == "" "none" else links.current})")
+			Stdout.line!("Deployed Lyceum Study ${version} to ${url}/ (previous: ${if links.current == "" "none" else links.current})")
 		}
 		Err(problem) => {
 			restored = if links.current != "" point!(host, dir, "current", links.current) else Ok({})

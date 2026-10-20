@@ -446,28 +446,28 @@ documentTitle : Model -> String
 documentTitle model =
     case ( model.screen, model.activeEntry ) of
         ( LibraryScreen, _ ) ->
-            "Aristos · Greek reading workspace"
+            "Lyceum Study · Greek reading workspace"
 
         ( SettingsScreen, _ ) ->
-            "Study tools · Aristos"
+            "Study tools · Lyceum Study"
 
         ( TodayScreen, _ ) ->
-            "Today · Aristos"
+            "Today · Lyceum Study"
 
         ( StatsScreen, _ ) ->
-            "Progress · Aristos"
+            "Progress · Lyceum Study"
 
         ( WordScreen lemma, _ ) ->
-            displayLemma lemma ++ " · Aristos"
+            displayLemma lemma ++ " · Lyceum Study"
 
         ( WordReviewScreen lemma, _ ) ->
-            "Review " ++ displayLemma lemma ++ " · Aristos"
+            "Review " ++ displayLemma lemma ++ " · Lyceum Study"
 
         ( _, Just entry ) ->
-            entry.title ++ " " ++ currentLabel model ++ " · Aristos"
+            entry.title ++ " " ++ currentLabel model ++ " · Lyceum Study"
 
         ( _, Nothing ) ->
-            "Aristos"
+            "Lyceum Study"
 
 
 {-| The route part of a URL in the same form `pathFor` produces, including the fragment's query.
@@ -3273,9 +3273,9 @@ isPunctuation form =
 viewAppHeader : Model -> Html Msg
 viewAppHeader model =
     header [ id appHeaderId, class "app-header" ]
-        [ button [ class "brand-button", type_ "button", onClick ShowLibrary, attribute "aria-label" "Aristos library" ]
+        [ button [ class "brand-button", type_ "button", onClick ShowLibrary, attribute "aria-label" "Lyceum Study library" ]
             [ span [ class "brand-mark", attribute "aria-hidden" "true" ] [ text "Α" ]
-            , span [ class "brand-word" ] [ text "Aristos" ]
+            , span [ class "brand-word" ] [ text "Lyceum Study" ]
             ]
         , nav [ class "global-nav", attribute "aria-label" "Primary navigation" ]
             (navButton "Home" (Navigate Route.Library) (model.screen == LibraryScreen || model.screen == TodayScreen)

@@ -1,5 +1,5 @@
 /*
- * The only maintained JavaScript in Aristos.
+ * The only maintained JavaScript in Lyceum Study.
  *
  * This file initializes Elm and translates generic storage port messages into
  * IndexedDB requests. Fetching, parsing, validation, normalization, and all
@@ -90,7 +90,7 @@
     performStorage(message).then(function (value) {
       app.ports.storageResponse.send({ id: message.id, ok: true, value: value });
     }).catch(function (error) {
-      console.warn("Aristos storage request failed", error);
+      console.warn("Lyceum Study storage request failed", error);
       app.ports.storageResponse.send({ id: message.id, ok: false, value: null });
     });
   });

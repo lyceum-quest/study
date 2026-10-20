@@ -1,8 +1,8 @@
-# Static Aristos releases (scripts/build-release.roc) and their deployment (scripts/deploy-site.roc).
+# Static Lyceum Study releases (scripts/build-release.roc) and their deployment (scripts/deploy-site.roc).
 # A release is dist/aristos/<target>/<version>/; dist/aristos/<target>/latest names the newest one.
 AristosSite :: [].{
 
-	# The Lyceum account API each target's config.json names. Aristos shows sign-in only when it has one,
+	# The Lyceum account API each target's config.json names. Lyceum Study shows sign-in only when it has one,
 	# so a local release ({}) behaves as before accounts existed.
 	account_api : Str -> Try(Str, [Release(Str), ..])
 	account_api = |target|

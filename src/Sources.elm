@@ -1,7 +1,7 @@
 module Sources exposing (Citation, decoder, encode, view)
 
 {-| The citation `scripts/build-corpus-preload.roc` attaches to each manifest entry: the original
-edition, the Opera Graeca Adnotata annotation layer, and Aristos's generated layers.
+edition, the Opera Graeca Adnotata annotation layer, and Lyceum Study's generated layers.
 -}
 
 import Html exposing (Html, a, p, span, text)

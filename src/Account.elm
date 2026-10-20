@@ -2,8 +2,8 @@ module Account exposing (Account(..), User, api, checkSession, clientHeader, fet
 
 {-| The optional Lyceum account (see `docs/dev_guide/auth-pattern.md`, "Apps on subdomains", in the Lyceum website).
 
-`/config.json`, written into each release, names the account API's origin; without one Aristos shows no sign-in.
-Sign-in happens on Lyceum's own pages: Aristos only asks `/api/me` who is signed in (sending the shared session
+`/config.json`, written into each release, names the account API's origin; without one Lyceum Study shows no sign-in.
+Sign-in happens on Lyceum's own pages: Lyceum Study only asks `/api/me` who is signed in (sending the shared session
 cookie) and links to Lyceum's login page with a `return` URL. A Supporter's progress syncs through it (see `Sync`).
 
 -}
