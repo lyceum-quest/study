@@ -44,8 +44,8 @@ main! = |args| {
 	Path.write_utf8!(Path.utf8("${partial}/config.json"), AristosSite.config_json(api))?
 	_ = run!("cp", ["-R", "preload", "${partial}/preload"])?
 	_ = run!("cp", ["-R", "fonts", "${partial}/fonts"])?
-	# The What's new page fetches it.
-	_ = copy!("CHANGELOG.md", "${partial}/CHANGELOG.md")?
+	# The What's new page fetches it; the published copy leaves out what the page hides.
+	Path.write_utf8!(Path.utf8("${partial}/CHANGELOG.md"), public_changelog(Path.read_utf8!(Path.utf8("CHANGELOG.md"))?))?
 
 	Path.rename!(Path.utf8(partial), Path.utf8(release))?
 	Path.write_utf8!(Path.utf8("${root}/latest"), "${version}\n")?
@@ -58,6 +58,28 @@ run! = |program, args| {
 	output = Cmd.new_str(program).args_str(args).exec_output!() ? |err| Release(Str.inspect(err))
 	Ok(Str.trim(output.stdout_utf8))
 }
+
+# CHANGELOG.md without its HTML comments (release drafts) and ### Internal sections, as the What's new page shows
+# it (src/Changelog.elm), so the file the site serves holds nothing more.
+public_changelog = |text| "${Str.join_with(keep_public(Str.split_on(text, "\n"), Bool.False, Bool.False, []), "\n")}\n"
+
+keep_public = |lines, in_comment, internal, kept|
+	match lines {
+		[] => kept
+		[line, .. as rest] => {
+			trimmed = Str.trim(line)
+			if in_comment or Str.starts_with(trimmed, "<!--") {
+				keep_public(rest, !Str.contains(line, "-->"), internal, kept)
+			} else if Str.starts_with(trimmed, "## ") or Str.starts_with(trimmed, "### ") {
+				hidden = trimmed == "### Internal"
+				keep_public(rest, Bool.False, hidden, if hidden kept else List.append(kept, line))
+			} else if internal or (trimmed == "" and (List.last(kept) ?? "-") == "") {
+				keep_public(rest, Bool.False, internal, kept)
+			} else {
+				keep_public(rest, Bool.False, Bool.False, List.append(kept, line))
+			}
+		}
+	}
 
 copy! = |source, destination| Path.write_bytes!(Path.utf8(destination), Path.read_bytes!(Path.utf8(source))?)
 

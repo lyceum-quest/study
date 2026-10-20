@@ -45,6 +45,7 @@ Commits:
 ### Internal
 
 - The texts come from Archeion's data releases; Archeion's release-staging pins and stages each one.
+- The published CHANGELOG.md leaves out release drafts and Internal sections, like the What's new page.
 
 ## [2026-10-13]
 
