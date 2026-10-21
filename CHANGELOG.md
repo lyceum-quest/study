@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+### Added
+
+- When you finish today's study, "Learn more" goes on to the next passages you haven't seen, and the finish screen links to your progress.
+
+### Fixed
+
+- Going on past today's study no longer stops the passages you just rated from coming back when they're due.
+
 ## [2026-10-20]
 
 ### Added

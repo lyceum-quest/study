@@ -5,13 +5,13 @@ import Browser
 import Browser.Dom as Dom
 import Browser.Events
 import Browser.Navigation as Nav
+import Changelog
 import Conllu
 import Dict exposing (Dict)
 import Fsrs
 import Html exposing (Html, a, article, aside, button, details, div, footer, h1, h2, h3, header, input, label, li, main_, nav, option, p, section, select, span, summary, table, tbody, td, text, textarea, th, thead, tr, ul)
 import Html.Attributes exposing (attribute, checked, class, classList, disabled, href, id, placeholder, rel, rows, selected, style, target, type_, value)
 import Html.Events exposing (on, onClick, onInput, stopPropagationOn)
-import Changelog
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -239,6 +239,7 @@ type alias Model =
     , scrollGeneration : Int
     , reviews : Dict String Review.Entry
     , newPerDay : Int
+    , extraNew : { day : Int, count : Int }
     , queueMode : Bool
     , queueDone : Bool
     , wordReviews : List Words.Review
@@ -337,6 +338,7 @@ type Msg
     | GoTo String
     | SetTodayScope String
     | StartTodayIn String
+    | LearnMore
     | SetLibrarySearch String
     | SetLibrarySort String
     | GotAccountConfig (Result Http.Error (Maybe String))
@@ -406,6 +408,7 @@ init _ url key =
                 , readerLayers = { glosses = True, morphology = True, translation = True }
                 , reviews = Dict.empty
                 , newPerDay = Review.newPerDayDefault
+                , extraNew = { day = 0, count = 0 }
                 , queueMode = False
                 , queueDone = False
                 , wordReviews = []
@@ -1138,7 +1141,7 @@ updateModel msg model =
         StudyToday entry ->
             let
                 today =
-                    Review.queue model.clock model.newPerDay entry.id entry.passages model.reviews
+                    Review.queue model.clock (newLimit model) entry.id entry.passages model.reviews
 
                 first =
                     List.head (today.due ++ today.new)
@@ -1153,6 +1156,36 @@ updateModel msg model =
 
         ContinueReading ->
             ( moveToSentence (model.sentenceIndex + 1) (browsing model), Cmd.none )
+
+        -- More new passages today, staying in the session: reviews that come due (learning steps included) still come
+        -- first, and the new passages are the next unseen ones.
+        LearnMore ->
+            let
+                inQueue =
+                    model.queueMode && model.screen /= TodayScreen && model.screen /= LibraryScreen
+
+                day =
+                    Review.startOfDay model.clock
+
+                already =
+                    if model.extraNew.day == day then
+                        model.extraNew.count
+
+                    else
+                        0
+
+                more =
+                    { model | extraNew = { day = day, count = already + learnMoreStep model } }
+            in
+            if inQueue then
+                ( advance { more | queueDone = False }, Cmd.none )
+
+            else
+                let
+                    mode =
+                        Maybe.withDefault Today.Everything model.todayMode
+                in
+                goToday mode { more | todayMode = Just mode }
 
         SetNewPerDay value ->
             case String.toInt value of
@@ -2295,14 +2328,47 @@ advance model =
 todayQueue : Model -> Maybe Review.Queue
 todayQueue model =
     model.activeEntry
-        |> Maybe.map (\entry -> Review.queue model.clock model.newPerDay entry.id (List.map .id model.corpus.sentences) model.reviews)
+        |> Maybe.map (\entry -> Review.queue model.clock (newLimit model) entry.id (List.map .id model.corpus.sentences) model.reviews)
+
+
+{-| Today's new-passage limit: the daily setting plus whatever "Learn more" added today.
+-}
+newLimit : Model -> Int
+newLimit model =
+    if model.extraNew.day == Review.startOfDay model.clock then
+        model.newPerDay + model.extraNew.count
+
+    else
+        model.newPerDay
+
+
+{-| How many new passages one "Learn more" adds.
+-}
+learnMoreStep : Model -> Int
+learnMoreStep model =
+    max 1 model.newPerDay
+
+
+{-| Whether "Learn more" would find unseen passages: in the open work during a work's queue, else in today's scope.
+-}
+moreToLearn : Model -> Bool
+moreToLearn model =
+    let
+        more =
+            { model | extraNew = { day = Review.startOfDay model.clock, count = model.extraNew.count + learnMoreStep model + 100000 } }
+    in
+    if model.queueMode then
+        todayQueue more |> Maybe.map (.new >> List.isEmpty >> not) |> Maybe.withDefault False
+
+    else
+        not (List.isEmpty (todayPlan more).new)
 
 
 {-| Today's session across every work (see `Today`).
 -}
 todayPlan : Model -> Today.Plan
 todayPlan model =
-    Today.plan model.clock model.newPerDay model.todayScope (lastWork model) (List.map (\entry -> { id = entry.id, passages = entry.passages }) model.library) model.reviews model.wordCards
+    Today.plan model.clock (newLimit model) model.todayScope (lastWork model) (List.map (\entry -> { id = entry.id, passages = entry.passages }) model.library) model.reviews model.wordCards
 
 
 {-| The work of the most recent graded passage, where new passages continue.
@@ -3754,7 +3820,11 @@ viewTodayPanel model =
           else
             p [ class "today-summary" ] [ text ("About " ++ counted minutes "minute" "minutes" ++ ". Reviews come first, then new passages.") ]
         , if List.isEmpty parts then
-            text ""
+            if moreToLearn { model | queueMode = False, todayMode = Nothing } then
+                div [ class "today-actions" ] [ learnMoreButton model True ]
+
+            else
+                text ""
 
           else
             div [ class "today-actions" ]
@@ -3840,6 +3910,11 @@ viewTodayPage model =
                         Nothing ->
                             [ h1 [ class "today-title" ] [ text "Done for now" ]
                             , viewUpcoming model mode
+                            , if mode /= Today.WordsOnly && moreToLearn model then
+                                div [ class "today-actions" ] [ learnMoreButton model True ]
+
+                              else
+                                text ""
                             ]
                    )
                 ++ [ p [ class "today-summary" ]
@@ -3864,6 +3939,24 @@ viewTodayPage model =
                    ]
             )
         ]
+
+
+{-| Continues the session with more new passages than today's limit; reviews still come back when due.
+-}
+learnMoreButton : Model -> Bool -> Html Msg
+learnMoreButton model primary =
+    button
+        [ class
+            (if primary then
+                "primary-button"
+
+             else
+                "secondary-button"
+            )
+        , type_ "button"
+        , onClick LearnMore
+        ]
+        [ text ("Learn " ++ String.fromInt (learnMoreStep model) ++ " more →") ]
 
 
 {-| In today's session: how much is left.
@@ -5895,7 +5988,12 @@ viewQueueDone model =
 
                   else
                     Nothing
-                , Just (button [ class "secondary-button", type_ "button", onClick ContinueReading ] [ text "Keep going in order" ])
+                , if moreToLearn model then
+                    Just (learnMoreButton model (dueNow == 0))
+
+                  else
+                    Nothing
+                , Just (button [ class "secondary-button", type_ "button", onClick (Navigate Route.Stats) ] [ text "Your progress" ])
                 , Just (button [ class "secondary-button", type_ "button", onClick ShowLibrary ] [ text "Back to library" ])
                 ]
             )
