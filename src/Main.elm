@@ -3393,6 +3393,7 @@ viewAppHeader model =
             )
         , div [ class "header-actions" ]
             [ viewAccountButton model
+            , viewSupportLink model
             , button
                 [ class "theme-button"
                 , type_ "button"
@@ -3422,6 +3423,33 @@ viewAppHeader model =
                 ]
             ]
         ]
+
+
+{-| Support Lyceum, on Lyceum's own site (the account API's origin; lyceum.quest without one), in a new tab so the
+session stays open. Supporters don't see it.
+-}
+viewSupportLink : Model -> Html Msg
+viewSupportLink model =
+    let
+        supporter =
+            case model.account of
+                Account.SignedIn _ user ->
+                    user.pro
+
+                _ ->
+                    False
+
+        origin =
+            Account.api model.account |> Maybe.withDefault "https://lyceum.quest"
+    in
+    if supporter then
+        text ""
+
+    else
+        a [ class "support-button", href (origin ++ "/pricing"), target "_blank", rel "noopener", attribute "title" "Support Lyceum" ]
+            [ span [ attribute "aria-hidden" "true" ] [ text "♥" ]
+            , span [ class "support-label" ] [ text "Support" ]
+            ]
 
 
 {-| Sign-in to the optional Lyceum account, shown only when the release names an account API (config.json).
