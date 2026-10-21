@@ -3374,8 +3374,7 @@ viewAppHeader : Model -> Html Msg
 viewAppHeader model =
     header [ id appHeaderId, class "app-header" ]
         [ button [ class "brand-button", type_ "button", onClick ShowLibrary, attribute "aria-label" "Lyceum Study library" ]
-            [ span [ class "brand-mark", attribute "aria-hidden" "true" ] [ text "Α" ]
-            , span [ class "brand-word" ] [ text "Lyceum Study" ]
+            [ span [ class "brand-word" ] [ text "Lyceum Study" ]
             ]
         , nav [ class "global-nav", attribute "aria-label" "Primary navigation" ]
             (navButton "Home" (Navigate Route.Library) (model.screen == LibraryScreen || model.screen == TodayScreen)

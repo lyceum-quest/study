@@ -269,18 +269,6 @@ p {
   font-weight: 700;
 }
 
-.brand-mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  border-radius: 4px;
-  color: #1a2639;
-  background: #c9a227;
-  font-size: 1.08rem;
-  box-shadow: inset 0 0 0 1px rgb(26 38 57 / 25%);
-  place-items: center;
-}
-
 .header-actions {
   display: flex;
   align-items: center;
@@ -495,7 +483,6 @@ a.global-nav-button {
   background: var(--teal-dark);
 }
 
-.brand-mark,
 .primary-button,
 .checkpoint-button,
 .is-selected .preset-check,
@@ -2902,7 +2889,10 @@ a.global-nav-button {
 }
 
 @media (max-width: 480px) {
-  .brand-word,
+  .brand-button {
+    font-size: 1rem;
+  }
+
   .theme-label,
   .account-label,
   .settings-label {
