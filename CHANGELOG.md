@@ -7,7 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
-- A Support button in the header, to support Lyceum on lyceum.quest.
+- A Support link in the menu, to support Lyceum on lyceum.quest.
 - When you finish today's study, "Learn more" goes on to the next passages you haven't seen, and the finish screen links to your progress.
 
 ### Fixed

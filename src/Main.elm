@@ -3380,6 +3380,7 @@ viewAppHeader model =
         , nav [ class "global-nav", attribute "aria-label" "Primary navigation" ]
             (navButton "Home" (Navigate Route.Library) (model.screen == LibraryScreen || model.screen == TodayScreen)
                 :: navButton "Progress" (Navigate Route.Stats) (model.screen == StatsScreen)
+                :: viewSupportLink model
                 :: navButton "What's new" (Navigate Route.WhatsNew) (model.screen == WhatsNewScreen)
                 :: (case model.activeEntry of
                         Just entry ->
@@ -3393,7 +3394,6 @@ viewAppHeader model =
             )
         , div [ class "header-actions" ]
             [ viewAccountButton model
-            , viewSupportLink model
             , button
                 [ class "theme-button"
                 , type_ "button"
@@ -3446,10 +3446,8 @@ viewSupportLink model =
         text ""
 
     else
-        a [ class "support-button", href (origin ++ "/pricing"), target "_blank", rel "noopener", attribute "title" "Support Lyceum" ]
-            [ span [ attribute "aria-hidden" "true" ] [ text "♥" ]
-            , span [ class "support-label" ] [ text "Support" ]
-            ]
+        a [ class "global-nav-button", href (origin ++ "/pricing"), target "_blank", rel "noopener", attribute "title" "Support Lyceum" ]
+            [ text "Support" ]
 
 
 {-| Sign-in to the optional Lyceum account, shown only when the release names an account API (config.json).

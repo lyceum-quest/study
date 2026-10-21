@@ -315,86 +315,6 @@ p {
 }
 
 /* Lyceum account (shown only when config.json names an account API) */
-/* Support Lyceum: Lyceum's gold pill (its navbar's .nav-support-btn). A glint passes now and then; on hover a navy
-   panel sweeps in behind the text and the colors swap to gold on navy, ringed in gold. */
-.support-button {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  display: inline-flex;
-  min-height: 38px;
-  align-items: center;
-  gap: 0.35em;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #f0d47a 0%, #c9a227 48%, #a8841c 100%);
-  color: #1a2639;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-decoration: none;
-  white-space: nowrap;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 0 12px rgba(201, 162, 39, 0.45);
-  transition: transform 0.15s ease, box-shadow 0.2s ease, color 0.3s ease;
-}
-
-.support-button::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: #1a2639;
-  transform: translateX(-101%);
-  transition: transform 0.35s cubic-bezier(0.7, 0, 0.3, 1);
-  pointer-events: none;
-}
-
-.support-button::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 35%;
-  height: 200%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
-  transform: rotate(20deg);
-  animation: support-glint 5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.support-button:hover,
-.support-button:focus-visible {
-  color: #c9a227;
-  transform: translateY(-1px);
-  box-shadow: inset 0 0 0 2px #c9a227, 0 0 20px rgba(201, 162, 39, 0.75);
-}
-
-.support-button:hover::before,
-.support-button:focus-visible::before {
-  transform: translateX(0);
-}
-
-@keyframes support-glint {
-  0%,
-  75% {
-    left: -60%;
-  }
-
-  100% {
-    left: 130%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .support-button::after {
-    display: none;
-  }
-
-  .support-button::before {
-    transition: none;
-  }
-}
-
 .account-button {
   display: flex;
   min-height: 38px;
@@ -460,6 +380,13 @@ p {
   cursor: pointer;
   font-size: 0.79rem;
   font-weight: 650;
+}
+
+/* Support is a link to Lyceum, drawn like the other nav buttons. */
+a.global-nav-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .global-nav-button::after {
