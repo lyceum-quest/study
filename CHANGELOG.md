@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+### Fixed
+
+- Grading the last passage of a work no longer brings the same passage back; it says you have finished the work.
+
 ## [2026-10-21]
 
 ### Added

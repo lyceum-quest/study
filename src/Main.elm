@@ -242,6 +242,7 @@ type alias Model =
     , extraNew : { day : Int, count : Int }
     , queueMode : Bool
     , queueDone : Bool
+    , workFinished : Bool
     , wordReviews : List Words.Review
     , wordCards : Dict String Words.Card
     , todayMode : Maybe Today.Mode
@@ -411,6 +412,7 @@ init _ url key =
                 , extraNew = { day = 0, count = 0 }
                 , queueMode = False
                 , queueDone = False
+                , workFinished = False
                 , wordReviews = []
                 , wordCards = Dict.empty
                 , todayMode = Nothing
@@ -1905,7 +1907,7 @@ showRoute route model =
                     else
                         moveToSentence index settled
             in
-            ( applyQuery { moved | screen = WorkspaceScreen }, Cmd.none )
+            ( applyQuery { moved | screen = WorkspaceScreen, workFinished = False }, Cmd.none )
 
         Route.Reader work passage ->
             let
@@ -2322,7 +2324,8 @@ advance model =
         moveToSentence (model.sentenceIndex + 1) model
 
     else
-        model
+        -- The last passage of the work: say so, rather than showing it again with the answers cleared.
+        { model | workFinished = True, popupWord = Nothing, activeModule = Nothing }
 
 
 todayQueue : Model -> Maybe Review.Queue
@@ -2499,6 +2502,7 @@ moveToSentence sentenceIndex model =
             , historyOpen = False
             , historyAttempt = Nothing
             , notice = Nothing
+            , workFinished = False
         }
 
 
@@ -5012,6 +5016,9 @@ viewWorkspace model =
             [ if model.queueDone then
                 viewQueueDone model
 
+              else if model.workFinished then
+                viewWorkFinished model
+
               else if model.historyOpen then
                 viewHistory model
 
@@ -5026,7 +5033,7 @@ viewWorkspace model =
               else
                 text ""
             ]
-        , if model.queueDone then
+        , if model.queueDone || model.workFinished then
             text ""
 
           else
@@ -5956,6 +5963,59 @@ viewQueueStatus model =
 
         _ ->
             text ""
+
+
+{-| After grading the last passage of a work outside a study session: the work is finished. What's due comes back
+through Study; the library and progress are a click away.
+-}
+viewWorkFinished : Model -> Html Msg
+viewWorkFinished model =
+    let
+        work =
+            model.activeEntry |> Maybe.map .id |> Maybe.withDefault ""
+
+        dueNow =
+            todayQueue model |> Maybe.map (.due >> List.length) |> Maybe.withDefault 0
+
+        nextDue =
+            Review.dueLater model.clock work model.reviews
+    in
+    section [ class "reading-stage queue-done" ]
+        [ p [ class "eyebrow" ] [ text (workTitle model) ]
+        , h2 [] [ text ("You've finished " ++ workTitle model) ]
+        , p [ class "muted" ]
+            [ text
+                (case ( dueNow, nextDue ) of
+                    ( 0, Just due ) ->
+                        "That was the last passage. Its next review is due in " ++ Review.intervalLabel model.clock due ++ "."
+
+                    ( 0, Nothing ) ->
+                        "That was the last passage."
+
+                    _ ->
+                        "That was the last passage. " ++ String.fromInt dueNow ++ plural dueNow " review is" " reviews are" ++ " due now."
+                )
+            ]
+        , div [ class "button-row" ]
+            (List.filterMap identity
+                [ model.activeEntry
+                    |> Maybe.map
+                        (\entry ->
+                            button [ class "primary-button", type_ "button", onClick (StartTodayIn entry.id) ]
+                                [ text
+                                    (if dueNow > 0 then
+                                        "Review now →"
+
+                                     else
+                                        "Study this work →"
+                                    )
+                                ]
+                        )
+                , Just (button [ class "secondary-button", type_ "button", onClick (Navigate Route.Stats) ] [ text "Your progress" ])
+                , Just (button [ class "secondary-button", type_ "button", onClick ShowLibrary ] [ text "Back to library" ])
+                ]
+            )
+        ]
 
 
 viewQueueDone : Model -> Html Msg
