@@ -1,6 +1,6 @@
 app [kaifile] {
-	pf: platform "https://github.com/thebrandonlucas/kai/releases/download/v0.0.8/9b3Nr3mzNr1rEm3xPgFaaAFaizQS1SfcvHUsSDnEcy2S.tar.zst",
-	std: "https://github.com/thebrandonlucas/kai/releases/download/v0.0.8/std-96MVndfriX4HRuFzHn5735BuvzH1mYdhkm5JeuoTDg96.tar.zst",
+	pf: platform "https://github.com/thebrandonlucas/kai/releases/download/v0.0.10/9jXNkEdEWZ3cyQqHMLyTenLr4Xj5nEJT48UwnU8AxPCp.tar.zst",
+	std: "https://github.com/thebrandonlucas/kai/releases/download/v0.0.10/std-CJKhhQ3UzajxpUqUKcpv2cwHGJpXQ8qPRiHKL5prqK2y.tar.zst",
 }
 
 import std.Std
