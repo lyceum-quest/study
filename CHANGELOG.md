@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+<!-- release draft (Archeion's changelog.roc): what changed since release-2026.10.21. Describe it in the entries below, in reader language (Internal for the rest), then delete this comment.
+Lyceum Editions:
+- Gospel of Luke: 80 -> 132 passages
+Commits:
+- 56eba4b data: pin Archeion preload-v2026.11.03
+- b46d5ec fix: grading a work's last passage says it's finished instead of showing the passage again
+-->
+
 ### Fixed
 
 - Grading the last passage of a work no longer brings the same passage back; it says you have finished the work.
