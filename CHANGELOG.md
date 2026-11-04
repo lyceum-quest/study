@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+## [2026-11-04]
+
 ### Added
 
 - The Gospel of Luke continues through chapter 2 (2:1-52), with prose translations and word-by-word glosses. These
