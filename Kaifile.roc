@@ -50,6 +50,9 @@ kaifile = Std.kaifile([
 	# Runs the Roc FSRS package against tests/fixtures/fsrs/*.json, as tests/FsrsTest.elm does for the Elm port.
 	Task("test-fsrs-roc", [Use("signals"), Run(["roc", "devtools/test-fsrs.roc"])]),
 
+	# Runs tests/ChangelogTest.elm's cases against the Roc port of src/Changelog.elm.
+	Task("test-changelog", [Use("signals"), Run(["roc", "devtools/test-changelog.roc"])]),
+
 	# Type-checks the port to roc-signals (signals/: the Elm library and review screens) and its build script.
 	Task("check-signals", [Use("signals"), Run(["roc", "check", "signals/main.roc"])]),
 

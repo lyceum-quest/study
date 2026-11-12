@@ -5,8 +5,10 @@
 ## decode in the shapes the Elm app keeps in IndexedDB.
 package
 	[
+		Changelog,
 		Corpus,
 		Library,
+		Morphology,
 		Review,
 		Route,
 		Study,
