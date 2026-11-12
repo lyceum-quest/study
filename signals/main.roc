@@ -6,10 +6,10 @@ app [main] {
 }
 
 import pf.Engine
-import ReviewApp
+import View
 
-## The library and review screens of Lyceum Study on roc-signals 0.3.0:
+## Lyceum Study on roc-signals 0.3.0, ported from the Elm app (src/):
 ## `roc build --target=wasm32` gives the browser module and
 ## `roc build --target=x64musl` its native spec runner (see Kaifile.roc).
 main : Engine.Program
-main = ReviewApp.program
+main = View.program

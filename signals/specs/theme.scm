@@ -1,11 +1,12 @@
-(test "Review — the theme is the Elm app's, and saved where it keeps it"
+(test "Theme — the Elm app's theme, toggled and saved where it keeps it"
   (setup
-    (initial-location "/signals/#/demo"))
+    (initial-location "/signals/#/"))
   (steps
-    (change (test-id "store") "{\"id\":\"theme:3\",\"ok\":true,\"value\":{\"key\":\"theme\",\"value\":\"light\"},\"now\":1762905600000}")
+    (expect-attr (role button :name "Use light theme") "aria-pressed" "true")
+    (change (test-id "store") "{\"id\":\"theme:1\",\"ok\":true,\"value\":{\"key\":\"theme\",\"value\":\"light\"},\"now\":1762905600000}")
     (expect-attr (role button :name "Use dark theme") "aria-pressed" "false")
     (click (role button :name "Use dark theme"))
     (expect-attr (role button :name "Use light theme") "aria-pressed" "true")
-    (expect-attr (test-id "store") "data-request" "[{\"id\":\"save:4\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"theme\",\"value\":\"dark\"}}]")
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"save:7\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"theme\",\"value\":\"dark\"}}]")
   )
 )

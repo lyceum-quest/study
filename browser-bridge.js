@@ -92,7 +92,8 @@
   }
 
   // The roc-signals app's port: a batch of messages per data-request, each
-  // answer (plus "now") as the value of a change event. See signals/Store.roc.
+  // answer (plus "now" and the UTC "offset") as the value of a change event.
+  // See signals/Store.roc.
   customElements.define("lyceum-store", class extends HTMLElement {
     static observedAttributes = ["data-request"];
 
@@ -100,6 +101,7 @@
       if (!batch) return;
       JSON.parse(batch).forEach((message) => answer(message, (response) => {
         response.now = Date.now();
+        response.offset = -new Date().getTimezoneOffset();
         this.value = JSON.stringify(response);
         this.dispatchEvent(new Event("change", { bubbles: true }));
       }));

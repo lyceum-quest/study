@@ -14,7 +14,9 @@ import json.JsonValue
 ## JSON of `storageResponse` plus the time it finished:
 ## `{"id", "ok", "value", "now"}`, with `value` the record (`get`, `null` when
 ## absent), the list of records (`getAll`), the stored record (`put`) or `null`
-## (`clear`, or a failure). `now` is `Date.now()`, the app's only wall clock.
+## (`clear`, or a failure). `now` is `Date.now()`, the app's only wall clock, and
+## `offset` the browser's UTC offset in minutes (east positive), the fixed
+## zone Elm's `Time.here` gives; `offset` may be absent (then 0).
 ##
 ## Workaround: roc-signals 0.3.0 has only local storage, so IndexedDB is reached
 ## through this custom element
@@ -22,7 +24,7 @@ import json.JsonValue
 ## replace it with platform requests if roc-signals gains them.
 Store := [].{
 
-	Response : { id : Str, ok : Bool, value : JsonValue, now : I64 }
+	Response : { id : Str, ok : Bool, value : JsonValue, now : I64, offset : I64 }
 
 	get : Str, Str, Str -> JsonValue
 	get = |id, store, key| message(id, "get", store, [("key", JsonValue.str(key))])
@@ -49,6 +51,10 @@ Store := [].{
 				ok: JsonValue.as_bool(JsonValue.field(json, "ok")?)?,
 				value: JsonValue.field(json, "value")?,
 				now: JsonValue.as_i64(JsonValue.field(json, "now")?)?,
+				offset: match JsonValue.field(json, "offset") {
+					Ok(minutes) => JsonValue.as_i64(minutes)?
+					Err(_) => 0
+				},
 			},
 		)
 	}

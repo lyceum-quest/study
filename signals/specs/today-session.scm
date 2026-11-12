@@ -1,0 +1,33 @@
+(test "Today — Start opens the due review, then the new passage, then today's page"
+  (setup
+    ; Yesterday the Elm app graded Demo 1:2 Good (its attempt and card), so 1:2 is
+    ; due now and comes before the new 1:1. 1762905600000 is 2025-11-12T00:00:00Z.
+    (initial-location "/signals/#/"))
+  (steps
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"theme:1\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"theme\"},{\"id\":\"reader-layers:2\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"reader-layers\"},{\"id\":\"positions:3\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"positions\"},{\"id\":\"settings:4\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"review-settings\"},{\"id\":\"scope:5\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"today-scope\"},{\"id\":\"progress:6\",\"operation\":\"getAll\",\"store\":\"progress\"}]")
+    (change (test-id "store") "{\"id\":\"progress:6\",\"ok\":true,\"value\":[{\"id\":\"attempt:demo:1.2:1762819200000\",\"type\":\"attempt\",\"work\":\"demo\",\"passage\":\"1.2\",\"sentenceId\":\"1.2\",\"sentenceText\":\"θεός\",\"startedAt\":1762819100000,\"finishedAt\":1762819200000,\"items\":[{\"key\":\"w:1\",\"kind\":\"word\",\"form\":\"θεός\",\"lemma\":\"θεός\",\"guess\":\"God\",\"reference\":\"God\",\"revealedEarly\":false,\"mark\":true}],\"rating\":\"good\"},{\"id\":\"card:demo:1.2\",\"type\":\"card\",\"work\":\"demo\",\"passage\":\"1.2\",\"introducedAt\":1762819200000,\"fsrs\":\"v5.4.2 using FSRS-6.0\",\"card\":{\"due\":1762819800000,\"stability\":2.3065,\"difficulty\":2.11810397,\"elapsedDays\":0,\"scheduledDays\":0,\"learningSteps\":1,\"reps\":1,\"lapses\":0,\"state\":\"learning\",\"lastReview\":1762819200000}},{\"id\":\"wordreview:x\",\"type\":\"wordreview\"}],\"now\":1762905600000}")
+    (stub-http "manifest" :url "/preload/corpora.json" :status 200 :body "{\"version\":1,\"corpora\":[{\"id\":\"demo\",\"title\":\"Demo Work\",\"path\":\"corpora/demo.conllu\",\"unitsPath\":\"corpora/demo.units.json\",\"passages\":[\"1.1\",\"1.2\"],\"source\":{\"name\":\"Test source\",\"url\":\"https://example.org\",\"commit\":\"abc\",\"license\":\"CC BY-SA 4.0\",\"edition\":\"Test edition\"}}]}")
+    (run-effect 1)
+    (expect-text (role heading :name "1 passage to review · 1 new passage") "1 passage to review · 1 new passage")
+    (click (role button :name "Start →"))
+    (expect-current-location "/signals/#/demo/1.2?today=all")
+    (stub-http "corpus" :url "/preload/corpora/demo.conllu" :status 200 :body "# sent_id = 1\n1\tλόγος\tλόγος\tn\tn-s---mn-\t_\t0\tSBJ\t_\tt_1|gloss=word\n2\t,\t,\tu\tu--------\t_\t1\tAuxX\t_\tt_2|gloss=,\n3\tἦν\tεἰμί\tv\tv3siia---\t_\t0\tPRED\t_\tt_3|gloss=was\n\n# sent_id = 2\n1\tθεός\tθεός\tn\tn-s---mn-\t_\t0\tSBJ\t_\tt_4|gloss=God\n\n")
+    (run-effect 2)
+    (stub-http "units" :url "/preload/corpora/demo.units.json" :status 200 :body "[{\"ref\":\"1.1\",\"label\":\"1:1\",\"literal\":\"word, was\",\"prose\":\"There was the word\",\"tokens\":[\"t_1\",\"t_2\",\"t_3\"]},{\"ref\":\"1.2\",\"label\":\"1:2\",\"literal\":\"God\",\"prose\":\"God\",\"tokens\":[\"t_4\"]}]")
+    (run-effect 3)
+    (change (test-id "store") "{\"id\":\"draft:7\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
+    (expect-text (text "Today · 0 words · 2 passages left") "Today · 0 words · 2 passages left")
+    (click (role button :name "Submit checkpoint →"))
+    (expect-text (test-id "interval-Good") "7 d")
+    (click (role button :name "Good"))
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"rating:9\",\"operation\":\"get\",\"store\":\"progress\",\"key\":\"card:demo:1.2\"}]")
+    (change (test-id "store") "{\"id\":\"rating:9\",\"ok\":true,\"value\":null,\"now\":1762905660000}")
+    (expect-current-location "/signals/#/demo/1.1?today=all")
+    (expect-text (text "Today · 0 words · 1 passage left") "Today · 0 words · 1 passage left")
+    (click (role button :name "Submit checkpoint →"))
+    (click (role button :name "Easy"))
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"rating:16\",\"operation\":\"get\",\"store\":\"progress\",\"key\":\"card:demo:1.1\"}]")
+    (change (test-id "store") "{\"id\":\"rating:16\",\"ok\":true,\"value\":null,\"now\":1762905720000}")
+    (expect-current-location "/signals/#/today?today=all")
+  )
+)
