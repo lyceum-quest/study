@@ -61,6 +61,9 @@ kaifile = Std.kaifile([
 
 	Task("test-review-cards", [Use("signals"), Run(["roc", "devtools/test-review-cards.roc"])]),
 
+	# Checks the Roc ports of src/Conllu.elm, src/Passage.elm and src/Study.elm (corpus parsing over the real preload, citations, drafts and attempts).
+	Task("test-corpus", [Use("signals"), Run(["roc", "devtools/test-corpus.roc"])]),
+
 	# Type-checks the port to roc-signals (signals/: the Elm library and review screens) and its build script.
 	Task("check-signals", [Use("signals"), Run(["roc", "check", "signals/main.roc"])]),
 

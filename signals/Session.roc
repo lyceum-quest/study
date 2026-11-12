@@ -694,7 +694,7 @@ finish_rating = |model|
 						[
 							("save", |id| Store.put(id, "progress", Study.encode_attempt(attempt))),
 							("save", |id| Store.put(id, "progress", Review.encode_entry(entry))),
-							("save", |id| Store.put(id, "metadata", Store.setting("draft:${model.work}:${current.id}", Study.empty_draft))),
+							("save", |id| Store.put(id, "metadata", Store.setting("draft:${model.work}:${current.id}", Study.encode_draft(Study.empty_draft)))),
 						],
 					)
 					open_next(saved)

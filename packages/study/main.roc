@@ -15,6 +15,7 @@ package
 		Study,
 		Sync,
 		Today,
+		Tools,
 		Words,
 	]
 	{
