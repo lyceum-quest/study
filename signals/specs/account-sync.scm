@@ -15,10 +15,10 @@
     (expect-attr (role link :name "brandon") "title" "Signed in as brandon · Not synced yet")
     (expect-absent (role link :name "Support"))
     ; The sync state is read once; the next tick syncs.
-    (expect-attr (test-id "store") "data-request" "[{\"id\":\"sync-state:7\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"sync-state\"}]")
-    (change (test-id "store") "{\"id\":\"sync-state:7\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"sync-state:8\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"sync-state\"}]")
+    (change (test-id "store") "{\"id\":\"sync-state:8\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
     (tick-interval 5000)
-    (change (test-id "store") "{\"id\":\"settings:8\",\"ok\":true,\"value\":null,\"now\":1762905605000}")
+    (change (test-id "store") "{\"id\":\"settings:9\",\"ok\":true,\"value\":null,\"now\":1762905605000}")
     (tick-interval 5000)
     (expect-text (text "Syncing…") "Syncing…")
     (stub-http "sync" :url "https://api.test/api/sync" :status 200 :body "{\"records\":[{\"id\":\"attempt:demo:1.1:1762819200000\",\"type\":\"attempt\",\"updatedAt\":1762819200000,\"body\":{\"id\":\"attempt:demo:1.1:1762819200000\",\"type\":\"attempt\",\"work\":\"demo\",\"passage\":\"1.1\",\"sentenceId\":\"1.1\",\"sentenceText\":\"λόγος , ἦν\",\"startedAt\":1762819100000,\"finishedAt\":1762819200000,\"items\":[{\"key\":\"w:1\",\"kind\":\"word\",\"form\":\"λόγος\",\"lemma\":\"λόγος\",\"guess\":\"word\",\"reference\":\"word\",\"revealedEarly\":false,\"mark\":true},{\"key\":\"w:3\",\"kind\":\"word\",\"form\":\"ἦν\",\"lemma\":\"εἰμί\",\"guess\":\"is\",\"reference\":\"was\",\"revealedEarly\":false,\"mark\":false},{\"key\":\"prose\",\"kind\":\"prose\",\"form\":\"\",\"lemma\":\"\",\"guess\":\"\",\"reference\":\"There was the word\",\"revealedEarly\":false,\"mark\":null}],\"rating\":\"good\"}},{\"id\":\"meta:theme\",\"type\":\"setting\",\"updatedAt\":1762905000000,\"body\":\"light\"}],\"cursor\":12,\"more\":false}")

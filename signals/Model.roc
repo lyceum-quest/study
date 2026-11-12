@@ -61,6 +61,8 @@ Model := [].{
 		fetched_conllu : [Some(Str), None],
 		fetched_units : [Some(Str), None],
 		fetch_serial : U64,
+		# The work whose files came from the network (not the cache) this session.
+		network_work : Str,
 		sentence_index : U64,
 		# Studying a passage.
 		preset : Tools.Preset,
@@ -145,6 +147,7 @@ Model := [].{
 		fetched_conllu: None,
 		fetched_units: None,
 		fetch_serial: 0,
+		network_work: "",
 		sentence_index: 0,
 		preset: Tools.default_preset,
 		settings: Tools.assisted_settings,

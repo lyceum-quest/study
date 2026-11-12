@@ -34,6 +34,7 @@ Nav := [].{
 				("settings", |id| Store.get(id, "metadata", "review-settings")),
 				("scope", |id| Store.get(id, "metadata", "today-scope")),
 				("progress", |id| Store.get_all(id, "progress")),
+				("cached-corpus", |id| Store.get(id, "metadata", "cached-corpus")),
 			],
 		)
 		apply_route(model, route_of(location))
@@ -136,7 +137,7 @@ Nav := [].{
 	corpus_request = |model| {
 		none = { conllu: "", units: "", serial: model.fetch_serial }
 		match model.requested_work {
-			Some(id) if !(model.corpus_ready and Model.active_id(model) == id) =>
+			Some(id) if model.network_work != id =>
 				match Model.entry_for(model, id) {
 					Some(work) => { conllu: "/preload/${work.path}", units: if work.units_path == "" "" else "/preload/${work.units_path}", serial: model.fetch_serial }
 					None => none
@@ -302,6 +303,32 @@ Nav := [].{
 			None => model
 		}
 
+	## The work the Elm app or this one cached at its last download
+	## (`{"entry", "raw", "units"}`), shown at once if it is the one being
+	## opened; the download goes on and replaces it.
+	receive_cached : Model.Model, JsonValue -> Model.Model
+	receive_cached = |model, value| {
+		found = JsonValue.field(value, "value") ?? JsonValue.null
+		cached = match JsonValue.field(found, "entry") {
+			Ok(entry) => match (Corpus.decode_work(entry), JsonValue.field(found, "raw")) {
+				(Ok(work), Ok(raw)) => match JsonValue.as_str(raw) {
+					Ok(conllu) => Ok({ work, conllu, units: JsonValue.as_str(JsonValue.field(found, "units") ?? JsonValue.str("")) ?? "" })
+					Err(_) => Err(NoCache)
+				}
+				_ => Err(NoCache)
+			}
+			Err(_) => Err(NoCache)
+		}
+		match cached {
+			Ok({ work, conllu, units }) if model.requested_work == Some(work.id) and !model.corpus_ready and model.network_work != work.id =>
+				match Corpus.parse_work(work, conllu, units) {
+					Ok(parsed) => show_pending({ ..model, notice: "", active: Some(work), passages: parsed.sentences, corpus_ready: Bool.True, sentence_index: 0, study: Study.empty_draft, popup_word: None, reader_gloss: None, reader_revealed: Set.empty() })
+					Err(_) => model
+				}
+			_ => model
+		}
+	}
+
 	receive_lemma_index : Model.Model, Try(Str, _) -> Model.Model
 	receive_lemma_index = |model, result| {
 		lemma_index = match result {
@@ -426,7 +453,12 @@ install = |model|
 				Some(entry) =>
 					match Corpus.parse_work(entry, conllu, units) {
 						Ok(parsed) => {
-							fresh = { ..model, fetched_conllu: None, fetched_units: None }
+							fresh = Model.put_setting({ ..model, fetched_conllu: None, fetched_units: None, network_work: id }, "save", "cached-corpus", JsonValue.object([("entry", Corpus.encode_work(entry)), ("raw", JsonValue.str(conllu)), ("units", JsonValue.str(units))]))
+							# A fresh download of the work already shown from the cache keeps the reader's place.
+							if model.corpus_ready and Model.active_id(model) == id {
+								last = parsed.sentences.len().max(1) - 1
+								return { ..fresh, active: Some(entry), passages: parsed.sentences, sentence_index: model.sentence_index.min(last) }
+							}
 							installed = {
 								..fresh,
 								notice: "",

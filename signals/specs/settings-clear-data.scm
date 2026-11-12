@@ -15,7 +15,7 @@
     (expect-absent (role button :name "Delete saved data"))
     (click (role button :name "Clear saved data…"))
     (click (role button :name "Delete saved data"))
-    (expect-attr (test-id "store") "data-request" "[{\"id\":\"clear:7\",\"operation\":\"clear\",\"store\":\"progress\"},{\"id\":\"clear:8\",\"operation\":\"clear\",\"store\":\"metadata\"}]")
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"clear:8\",\"operation\":\"clear\",\"store\":\"progress\"},{\"id\":\"clear:9\",\"operation\":\"clear\",\"store\":\"metadata\"}]")
     (expect-text (test-id "notice") "Saved study data cleared from this device.")
     (expect-visible (role button :name "Clear saved data…"))
     (expect-text (test-id "graded-attempts") "0")

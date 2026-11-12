@@ -35,6 +35,7 @@ Storage := [].{
 						"settings" => settings(timed, value)
 						"scope" => scope(timed, value)
 						"sync-state" => sync_state(timed, value)
+						"cached-corpus" => Nav.receive_cached(timed, value)
 						"rating" => Nav.finish_rating(timed)
 						"word-rating" => Nav.finish_word_rating(timed)
 						_ => timed

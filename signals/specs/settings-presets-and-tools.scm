@@ -9,7 +9,7 @@
     (run-effect 2)
     (stub-http "units" :url "/preload/corpora/demo.units.json" :status 200 :body "[{\"ref\":\"1.1\",\"label\":\"1:1\",\"literal\":\"word, was\",\"prose\":\"There was the word\",\"tokens\":[\"t_1\",\"t_2\",\"t_3\"]},{\"ref\":\"1.2\",\"label\":\"1:2\",\"literal\":\"\",\"prose\":\"God\",\"tokens\":[\"t_4\"]}]")
     (run-effect 3)
-    (change (test-id "store") "{\"id\":\"draft:7\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
+    (change (test-id "store") "{\"id\":\"draft:8\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
     (click (role button :name "Choose tools"))
     (expect-current-location "/signals/#/settings")
     (expect-document-title "Study tools · Lyceum Study")

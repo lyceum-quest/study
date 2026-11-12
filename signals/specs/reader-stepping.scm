@@ -2,7 +2,7 @@
   (setup
     (initial-location "/signals/#/demo/read/1.1"))
   (steps
-    (expect-attr (test-id "store") "data-request" "[{\"id\":\"theme:1\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"theme\"},{\"id\":\"reader-layers:2\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"reader-layers\"},{\"id\":\"positions:3\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"positions\"},{\"id\":\"settings:4\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"review-settings\"},{\"id\":\"scope:5\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"today-scope\"},{\"id\":\"progress:6\",\"operation\":\"getAll\",\"store\":\"progress\"}]")
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"theme:1\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"theme\"},{\"id\":\"reader-layers:2\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"reader-layers\"},{\"id\":\"positions:3\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"positions\"},{\"id\":\"settings:4\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"review-settings\"},{\"id\":\"scope:5\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"today-scope\"},{\"id\":\"progress:6\",\"operation\":\"getAll\",\"store\":\"progress\"},{\"id\":\"cached-corpus:7\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"cached-corpus\"}]")
     (change (test-id "store") "{\"id\":\"progress:6\",\"ok\":true,\"value\":[],\"now\":1762905600000}")
     (stub-http "manifest" :url "/preload/corpora.json" :status 200 :body "{\"version\":1,\"corpora\":[{\"id\":\"demo\",\"title\":\"Demo Work\",\"path\":\"corpora/demo.conllu\",\"unitsPath\":\"corpora/demo.units.json\",\"passages\":[\"1.1\",\"1.2\",\"1.3\"],\"source\":{\"name\":\"Test source\",\"url\":\"https://example.org\",\"commit\":\"abc\",\"license\":\"CC BY-SA 4.0\",\"edition\":\"Test edition\"}}]}")
     (run-effect 1)
@@ -10,7 +10,7 @@
     (run-effect 2)
     (stub-http "units" :url "/preload/corpora/demo.units.json" :status 200 :body "[{\"ref\":\"1.1\",\"label\":\"1:1\",\"literal\":\"word, was\",\"prose\":\"There was the word\",\"tokens\":[\"t_1\",\"t_2\",\"t_3\"]},{\"ref\":\"1.2\",\"label\":\"1:2\",\"literal\":\"God\",\"prose\":\"It was God\",\"tokens\":[\"t_4\"]},{\"ref\":\"1.3\",\"label\":\"1:3\",\"literal\":\"in beginning\",\"prose\":\"In the beginning\",\"tokens\":[\"t_5\"]}]")
     (run-effect 3)
-    (change (test-id "store") "{\"id\":\"draft:7\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
+    (change (test-id "store") "{\"id\":\"draft:9\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
     (expect-text (text "1:1 · 1 / 3") "1:1 · 1 / 3")
     (expect-disabled (role button :name "Previous passage (k)") true)
     (click (role button :name "Next passage (j)"))
@@ -19,7 +19,7 @@
     (expect-attr (test-id "passage-1") "class" "reader-sentence")
     (expect-current-location "/signals/#/demo/read/1.2")
     (expect-document-title "Demo Work 1:2 · Lyceum Study")
-    (expect-attr (test-id "store") "data-request" "[{\"id\":\"draft:8\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"draft:demo:1.2\"},{\"id\":\"save:9\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"positions\",\"value\":{\"demo\":2}}}]")
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"draft:10\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"draft:demo:1.2\"},{\"id\":\"save:11\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"positions\",\"value\":{\"demo\":2}}}]")
     (click (role button :name "Next passage (j)"))
     (expect-text (text "1:3 · 3 / 3") "1:3 · 3 / 3")
     (expect-current-location "/signals/#/demo/read/1.3")

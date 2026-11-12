@@ -99,6 +99,59 @@ Corpus := [].{
 	}
 
 	## The works of `corpora.json` that have canonical passages: review needs them.
+	## One manifest entry, as the Elm app caches it with a work (`cached-corpus`).
+	decode_work : JsonValue -> Try(Work, Str)
+	decode_work = |entry| work(entry)
+
+	## A manifest entry in the shape `decode_work` reads (`encodeManifestEntry`).
+	encode_work : Work -> JsonValue
+	encode_work = |entry| {
+		JsonValue.object(
+			[
+				("id", JsonValue.str(entry.id)),
+				("title", JsonValue.str(entry.title)),
+				("path", JsonValue.str(entry.path)),
+				("sentenceCount", JsonValue.int(entry.sentence_count)),
+				("tokenCount", JsonValue.int(entry.token_count)),
+				(
+					"source",
+					JsonValue.object([("name", JsonValue.str(entry.source.name)), ("url", JsonValue.str(entry.source.url)), ("commit", JsonValue.str(entry.source.commit)), ("license", JsonValue.str(entry.source.license)), ("edition", JsonValue.str(entry.source.edition))]),
+				),
+				(
+					"citation",
+					match entry.citation {
+						Some(found) =>
+							JsonValue.object(
+								[
+									(
+										"text",
+										JsonValue.object(
+											[
+												("urn", JsonValue.str(found.text.urn)),
+												("author", JsonValue.str(found.text.author)),
+												("title", JsonValue.str(found.text.title)),
+												("edition", JsonValue.str(found.text.edition)),
+												("repository", JsonValue.str(found.text.repository)),
+												("snapshot", JsonValue.str(found.text.snapshot)),
+												("license", JsonValue.str(found.text.license)),
+												("readerUrl", JsonValue.str(found.text.reader_url)),
+												("sourceUrl", JsonValue.str(found.text.source_url)),
+											],
+										),
+									),
+									("annotations", JsonValue.object([("name", JsonValue.str(found.annotations.name)), ("version", JsonValue.str(found.annotations.version)), ("url", JsonValue.str(found.annotations.url)), ("license", JsonValue.str(found.annotations.license))])),
+									("generated", JsonValue.object([("name", JsonValue.str(found.generated.name)), ("layers", JsonValue.str(found.generated.layers)), ("model", JsonValue.str(found.generated.model)), ("license", JsonValue.str(found.generated.license))])),
+								],
+							)
+						None => JsonValue.null
+					},
+				),
+				("unitsPath", JsonValue.str(entry.units_path)),
+				("passages", JsonValue.array(entry.passages.map(JsonValue.str))),
+			],
+		)
+	}
+
 	works : Str -> Try(List(Work), Str)
 	works = |manifest_json| manifest(manifest_json).map_ok(|found| found.drop_if(|entry| entry.units_path == ""))
 
