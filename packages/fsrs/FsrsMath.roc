@@ -13,7 +13,7 @@
 ##   Roc has no `F64.exp`.
 ## - `log`: fdlibm `e_log.c`, which V8 uses for `Math.log` (bit for bit equal to
 ##   Node 22 and 24). Roc has no `F64.log`; see
-##   https://github.com/thebrandonlucas/roc-issues/tree/master/improvements/IMPROVEMENT-007-f64-log-and-exp
+##   https://github.com/thebrandonlucas/roc-issues/tree/master/roc/IMPROVEMENT-008-f64-log-and-exp
 ##   (upstream roc-lang/roc#5107). Remove `exp` and `log` here once Roc's give
 ##   the same bits.
 ## - `pow`: fdlibm `e_pow.c`. `Math.pow` has no single definition to match:
@@ -526,7 +526,7 @@ ieee754_pow = |x, y| {
 		$n = $n.bitwise_and(0x000fffff).bitwise_or(0x00100000).shr_wrap((20 - $k).to_u8_wrap())
 		if j < 0 {
 			# Not `-$n`, which Roc fails to parse:
-			# https://github.com/thebrandonlucas/roc-issues/tree/master/bugs/BUG-025-unary-minus-before-var-parse-error
+			# https://github.com/thebrandonlucas/roc-issues/tree/master/roc/BUG-027-unary-minus-before-var-parse-error
 			# (not yet reported upstream). Write `-$n` once that parses.
 			$n = $n.negate()
 		}

@@ -57,7 +57,7 @@ Library := [].{
 	## title, edition, author and original title, ignoring ASCII case.
 	## Workaround: Roc's `Str` has no Unicode case mapping, so unlike the Elm
 	## app's `String.toLower`, Greek letters match only in the case typed
-	## (https://github.com/thebrandonlucas/roc-issues/tree/master/improvements/IMPROVEMENT-008-unicode-case-mapping);
+	## (https://github.com/thebrandonlucas/roc-issues/tree/master/roc/IMPROVEMENT-009-unicode-case-mapping);
 	## use Unicode lowercasing once Roc has it.
 	shown : List(Corpus.Work), Dict(Str, I64), Str, Sort -> List(Corpus.Work)
 	shown = |works, activity, search, sort| {
