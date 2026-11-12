@@ -1,5 +1,6 @@
 app [main!] {
 	fsrs: "../packages/fsrs/main.roc",
+	json: "../packages/json/main.roc",
 	pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.27.0/9yjxqdGTP4xSpSEmDazwTmRsehfRZzA19pwEKkR6fj1g.tar.zst",
 }
 
@@ -8,7 +9,7 @@ import pf.Stderr
 import pf.Stdout
 import fsrs.Fsrs
 import fsrs.FsrsMath
-import JsonValue
+import json.JsonValue
 
 # Checks the Roc FSRS package (packages/fsrs/) against reference outputs from
 # ts-fsrs 5.4.2 (exact equality), fsrs-rs 6.6.2 (within f32 tolerance) and V8's

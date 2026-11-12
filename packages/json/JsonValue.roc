@@ -1,8 +1,8 @@
-## A JSON value, for reading the FSRS fixtures in tests/fixtures/fsrs/.
-## Adapted from apo's package/JsonValue.roc (https://github.com/lyceum-quest/apo,
-## MIT, Copyright (c) 2026 Lyceum): the same bounded decoder (size and depth;
-## duplicate keys and trailing input are rejected), with accessors for the
-## fixtures' numbers and without the encoders.
+## A JSON value, for the FSRS fixtures in tests/fixtures/fsrs/ and the records
+## the roc-signals app stores. Adapted from apo's package/JsonValue.roc
+## (https://github.com/lyceum-quest/apo, MIT, Copyright (c) 2026 Lyceum): the
+## same bounded decoder (size and depth; duplicate keys and trailing input are
+## rejected), with accessors for numbers and a compact encoder.
 JsonValue := [
 	Object(List((Str, JsonValue))),
 	Array(List(JsonValue)),
@@ -84,6 +84,63 @@ JsonValue := [
 		Null => Bool.True
 		_ => Bool.False
 	}
+
+	# Building and encoding: compact text, as JSON.stringify writes it. Numbers
+	# are written as stored, so a float must arrive in JavaScript's notation
+	# (FsrsMath.to_js_str) for the text to equal what JavaScript would write.
+
+	object : List((Str, JsonValue)) -> JsonValue
+	object = |entries| Object(entries)
+
+	array : List(JsonValue) -> JsonValue
+	array = |values| Array(values)
+
+	str : Str -> JsonValue
+	str = |text| String(text)
+
+	int : I64 -> JsonValue
+	int = |n| Number(n.to_str())
+
+	numeral : Str -> JsonValue
+	numeral = |text| Number(text)
+
+	boolean : Bool -> JsonValue
+	boolean = |b| Boolean(b)
+
+	null : JsonValue
+	null = Null
+
+	encode : JsonValue -> Str
+	encode = |json| match json {
+		Object(entries) => {
+			members = entries.map(|(name, member)| "${quote(name)}:${encode(member)}")
+			"{${Str.join_with(members, ",")}}"
+		}
+		Array(values) => "[${Str.join_with(values.map(encode), ",")}]"
+		String(text) => quote(text)
+		Number(text) => text
+		Boolean(b) => if (b) "true" else "false"
+		Null => "null"
+	}
+
+	quote : Str -> Str
+	quote = |text| {
+		var $out = ['"']
+		for byte in text.to_utf8() {
+			$out = match byte {
+				'"' => $out.concat(['\\', '"'])
+				'\\' => $out.concat(['\\', '\\'])
+				'\n' => $out.concat(['\\', 'n'])
+				'\r' => $out.concat(['\\', 'r'])
+				'\t' => $out.concat(['\\', 't'])
+				_ => if byte < ' ' $out.concat(['\\', 'u', '0', '0', hex_digit(byte // 16), hex_digit(byte % 16)]) else $out.append(byte)
+			}
+		}
+		Str.from_utf8($out.append('"')) ?? "\"\""
+	}
+
+	hex_digit : U8 -> U8
+	hex_digit = |n| if n < 10 '0' + n else 'a' + n - 10
 
 	# Decoding.
 

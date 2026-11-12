@@ -1,9 +1,10 @@
 /*
  * The only maintained JavaScript in Lyceum Study.
  *
- * This file initializes Elm and translates generic storage port messages into
- * IndexedDB requests. Fetching, parsing, validation, normalization, and all
- * application decisions belong in Elm or Roc.
+ * This file initializes Elm (or the roc-signals module #app names) and
+ * translates generic storage messages into IndexedDB requests. Fetching,
+ * parsing, validation, normalization, and all application decisions belong in
+ * Elm or Roc.
  */
 (function () {
   "use strict";
@@ -81,17 +82,40 @@
     }
   }
 
-  const app = Elm.Main.init({
-    node: document.getElementById("app"),
-    flags: null
-  });
-
-  app.ports.storageRequest.subscribe(function (message) {
+  function answer(message, respond) {
     performStorage(message).then(function (value) {
-      app.ports.storageResponse.send({ id: message.id, ok: true, value: value });
+      respond({ id: message.id, ok: true, value: value });
     }).catch(function (error) {
       console.warn("Lyceum Study storage request failed", error);
-      app.ports.storageResponse.send({ id: message.id, ok: false, value: null });
+      respond({ id: message.id, ok: false, value: null });
     });
+  }
+
+  // The roc-signals app's port: a batch of messages per data-request, each
+  // answer (plus "now") as the value of a change event. See signals/Store.roc.
+  customElements.define("lyceum-store", class extends HTMLElement {
+    static observedAttributes = ["data-request"];
+
+    attributeChangedCallback(name, previous, batch) {
+      if (!batch) return;
+      JSON.parse(batch).forEach((message) => answer(message, (response) => {
+        response.now = Date.now();
+        this.value = JSON.stringify(response);
+        this.dispatchEvent(new Event("change", { bubbles: true }));
+      }));
+    }
+  });
+
+  const node = document.getElementById("app");
+
+  if (node.dataset.wasm) {
+    import(node.dataset.runtime).then((runtime) => runtime.mountRocEngineApp({ wasmUrl: node.dataset.wasm, root: node, onFault: console.error })).catch(console.error);
+    return;
+  }
+
+  const app = Elm.Main.init({ node: node, flags: null });
+
+  app.ports.storageRequest.subscribe(function (message) {
+    answer(message, app.ports.storageResponse.send);
   });
 })();

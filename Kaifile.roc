@@ -50,6 +50,30 @@ kaifile = Std.kaifile([
 	# Runs the Roc FSRS package against tests/fixtures/fsrs/*.json, as tests/FsrsTest.elm does for the Elm port.
 	Task("test-fsrs-roc", [Use("signals"), Run(["roc", "devtools/test-fsrs.roc"])]),
 
+	# Type-checks the review screen on roc-signals (signals/, a port of the Elm review flow) and its build script.
+	Task("check-signals", [Use("signals"), Run(["roc", "check", "signals/main.roc"])]),
+
+	Task("check-signals-tool", [Use("signals"), Run(["roc", "check", "scripts/signals.roc"])]),
+
+	# Builds the review screen as a static page in dist/signals/ with the pinned roc-signals runtime
+	# (signals/runtime.lock.json). It shares the Elm app's IndexedDB only when served from the same origin, as from the
+	# repository root at /dist/signals/.
+	Task("build-signals", [Use("signals"), Run(["roc", "scripts/signals.roc", "build"])]),
+
+	# Runs the review screen's specs (signals/specs/*.scm) with its native spec runner. Their Chrome replay needs a
+	# checkout of roc-signals at the release tag (roc-issues roc-signals/RS-003-browser-spec-runner-in-release).
+	Task("test-signals", [Use("signals"), Run(["roc", "scripts/signals.roc", "specs"])]),
+
+	Workflow(
+		"signals",
+		[
+			RunTask("check-signals-tool", []),
+			RunTask("check-signals", []),
+			RunTask("test-signals", []),
+			RunTask("build-signals", []),
+		],
+	),
+
 	# Embeds tests/fixtures/fsrs/*.json in the generated tests/FsrsFixtures.elm.
 	Task("generate-fsrs-fixtures", [Use("dev"), Run(["roc", "devtools/generate-fsrs-fixtures.roc"])]),
 

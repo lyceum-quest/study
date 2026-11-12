@@ -5,13 +5,21 @@ import pf.Path
 import pf.Stderr
 import pf.Stdout
 
-max_bridge_bytes = 4096
+# Raised from 4096 when the bridge gained the roc-signals storage element (<lyceum-store>) beside the Elm ports.
+max_bridge_bytes = 4608
+
+# The roc-signals runtime is the only other JavaScript a page loads. It is never kept in the repository: the
+# build-signals task downloads the release signals/runtime.lock.json pins into dist/signals/ and checks its SHA-256,
+# and a built copy must still match that pin.
+runtime_path = "dist/signals/runtime.mjs"
 
 main! = |_args| {
 	bridge = Path.read_utf8!("browser-bridge.js")?
 	index = Path.read_utf8!("index.html")?
+	signals_page = Path.read_utf8!("signals/index.html")?
+	runtime_pinned = runtime_matches_pin!({})?
 	listed = Cmd.new("git")
-		.args(["ls-files", "--cached", "--others", "--exclude-standard", "--", "*.js"])
+		.args(["ls-files", "--cached", "--others", "--exclude-standard", "--", "*.js", "*.mjs", "*.cjs"])
 		.exec_output!()?
 	candidates = listed.stdout_utf8
 		.split_on("\n")
@@ -39,10 +47,26 @@ main! = |_args| {
 		fail!("index.html must contain exactly two external script elements")
 	} else if !Str.contains(index, "<script src=\"/elm.js\"></script>") or !Str.contains(index, "<script src=\"/browser-bridge.js\"></script>") {
 		fail!("index.html must load only the generated Elm bundle and browser bridge")
+	} else if Str.contains(signals_page, "<script>") or Str.contains(signals_page, "<script\n") {
+		fail!("signals/index.html contains inline JavaScript")
+	} else if List.len(Str.split_on(signals_page, "<script")) != 2 or !Str.contains(signals_page, "<script src=\"browser-bridge.js\"></script>") or !Str.contains(signals_page, "data-runtime=\"./runtime.mjs\"") {
+		fail!("signals/index.html must load only the browser bridge, which mounts the pinned roc-signals runtime")
+	} else if !runtime_pinned {
+		fail!("${runtime_path} is not the roc-signals runtime signals/runtime.lock.json pins; run the Kai build-signals task")
 	} else {
 		Stdout.line!("browser boundary OK: one ${List.len(Str.to_utf8(bridge)).to_str()}-byte bridge")
 	}
 }
+
+runtime_matches_pin! = |{}|
+	if Path.exists!(Path.utf8(runtime_path))? {
+		lock : { release : Str, url : Str, sha256 : Str }
+		lock = Json.parse(Path.read_utf8!("signals/runtime.lock.json")?)?
+		sum = Cmd.new("sha256sum").args(["--", "dist/signals/runtime.mjs"]).exec_output!()?
+		Ok(List.first(Str.split_on(sum.stdout_utf8, " ")) == Ok(lock.sha256))
+	} else {
+		Ok(Bool.True)
+	}
 
 existing_files! = |paths|
 	match paths {
