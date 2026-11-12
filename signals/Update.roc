@@ -95,17 +95,12 @@ flush = |model|
 
 base_path : Model.Model -> [Some(Str), None]
 base_path = |model| {
-	for_work = |to_route|
-		match model.active {
-			Some(work) => Some(Route.to_path(to_route(work.id)))
-			None => None
-		}
 	passage = Model.current_ref(model)
 	match model.screen {
 		LibraryScreen => Some(Route.to_path(Library))
 		SettingsScreen => Some(Route.to_path(Settings))
-		WorkspaceScreen => for_work(|work| Study(work, passage))
-		ReaderScreen => for_work(|work| Reader(work, Some(passage)))
+		WorkspaceScreen => for_work(model, |work| Study(work, passage))
+		ReaderScreen => for_work(model, |work| Reader(work, Some(passage)))
 		TodayScreen => Some(Route.to_path(Today))
 		WordScreen(lemma) => Some(Route.to_path(Word(lemma)))
 		WordReviewScreen(lemma) => Some(Route.to_path(WordReview(lemma)))
@@ -145,4 +140,11 @@ today_query = |model|
 	match model.today_mode {
 		Some(mode) => "?today=${Today.mode_to_str(mode)}"
 		None => ""
+	}
+
+for_work : Model.Model, (Str -> Route.Route) -> [Some(Str), None]
+for_work = |model, to_route|
+	match model.active {
+		Some(work) => Some(Route.to_path(to_route(work.id)))
+		None => None
 	}

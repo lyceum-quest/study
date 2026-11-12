@@ -1,5 +1,6 @@
 import fsrs.Fsrs
 import json.JsonValue
+import study.Changelog
 import study.Corpus
 import study.Review
 import study.Route
@@ -301,6 +302,25 @@ Nav := [].{
 			None => model
 		}
 
+	receive_lemma_index : Model.Model, Try(Str, _) -> Model.Model
+	receive_lemma_index = |model, result| {
+		lemma_index = match result {
+			Ok(text) => match decode_lemma_data(text) {
+				Ok(data) => IndexLoaded(data)
+				Err(_) => IndexFailed
+			}
+			Err(_) => IndexFailed
+		}
+		{ ..model, lemma_index }
+	}
+
+	receive_changelog : Model.Model, Try(Str, _) -> Model.Model
+	receive_changelog = |model, result|
+		match result {
+			Ok(text) => { ..model, changelog: ChangelogLoaded(Changelog.parse(text)) }
+			Err(_) => { ..model, changelog: ChangelogFailed }
+		}
+
 	set_new_per_day : Model.Model, Str -> Model.Model
 	set_new_per_day = |model, value|
 		match I64.from_str(value) {
@@ -343,23 +363,13 @@ route_work = |route|
 show_route : Model.Model, Route.Route -> Model.Model
 show_route = |model, route| {
 	settled = { ..model, pending_route: None }
-	# A citation that is not a passage of this work (e.g. an old bookmark) opens the saved position.
-	index_for = |work, ref|
-		match Corpus.index_of_ref(ref, model.passages) {
-			Some(index) => index
-			None => {
-				saved = (model.positions.get(work) ?? 1) - 1
-				last = model.passages.len().to_i64_wrap() - 1
-				saved.min(last).max(0).to_u64_wrap()
-			}
-		}
 	match route {
 		Study(work, passage) => {
-			index = index_for(work, passage)
+			index = index_for(model, work, passage)
 			moved = if index == settled.sentence_index settled else Workspace.move_to(settled, index)
 			apply_query({ ..moved, screen: WorkspaceScreen, work_finished: Bool.False })
 		}
-		Reader(work, passage) => { ..settled, screen: ReaderScreen, sentence_index: index_for(work, Model.with_default(passage, "")), reader_gloss: None }
+		Reader(work, passage) => { ..settled, screen: ReaderScreen, sentence_index: index_for(model, work, Model.with_default(passage, "")), reader_gloss: None }
 		_ => settled
 	}
 }
@@ -368,17 +378,9 @@ show_route = |model, route| {
 apply_query : Model.Model -> Model.Model
 apply_query = |model| {
 	query = model.query
-	number = |key|
-		match query.get(key) {
-			Ok(text) => match I64.from_str(text) {
-				Ok(n) => Some(n)
-				Err(_) => None
-			}
-			Err(_) => None
-		}
 	{
 		..model,
-		popup_word: match number("word") {
+		popup_word: match query_number(query, "word") {
 			Some(n) if n >= 0 => Some(n.to_u64_wrap())
 			_ => None
 		},
@@ -388,7 +390,7 @@ apply_query = |model| {
 			Err(_) => None
 		},
 		history_open: query.get("history") == Ok("1"),
-		history_attempt: number("attempt"),
+		history_attempt: query_number(query, "attempt"),
 		queue_mode: query.get("queue") == Ok("1"),
 		today_mode: match query.get("today") {
 			Ok(mode) => Some(Today.mode_from_str(mode))
@@ -461,3 +463,43 @@ download_failed = |model| {
 	}
 	{ ..model, pending_route: None, fetched_conllu: None, fetched_units: None, notice: "${title} could not be downloaded. Try again." }
 }
+
+## `preload/lemmas.json`: every occurrence of each lemma and the text of
+## every passage, for word pages.
+decode_lemma_data : Str -> Try(Model.LemmaData, Str)
+decode_lemma_data = |text| {
+	json = JsonValue.decode(text)?
+	lemmas = JsonValue.fields(JsonValue.field(json, "lemmas")?).map_try(|(lemma, found)| Ok((lemma, JsonValue.items(found)?.map_try(occurrence)?)))?
+	passages = JsonValue.fields(JsonValue.field(json, "passages")?).map_try(|(work, refs)| Ok((work, Dict.from_list(JsonValue.fields(refs).map_try(|(ref, passage)| Ok((ref, JsonValue.as_str(passage)?)))?))))?
+	Ok({ lemmas: Dict.from_list(lemmas), passages: Dict.from_list(passages) })
+}
+
+## The passage of `ref` in the open work; a citation that is not one of its
+## passages (e.g. an old bookmark) opens the saved position.
+index_for : Model.Model, Str, Str -> U64
+index_for = |model, work, ref|
+	match Corpus.index_of_ref(ref, model.passages) {
+		Some(index) => index
+		None => {
+			saved = (model.positions.get(work) ?? 1) - 1
+			last = model.passages.len().to_i64_wrap() - 1
+			saved.min(last).max(0).to_u64_wrap()
+		}
+	}
+
+query_number : Dict(Str, Str), Str -> [Some(I64), None]
+query_number = |query, key|
+	match query.get(key) {
+		Ok(text) => match I64.from_str(text) {
+			Ok(n) => Some(n)
+			Err(_) => None
+		}
+		Err(_) => None
+	}
+
+occurrence : JsonValue -> Try(Model.Occurrence, Str)
+occurrence = |item|
+	Ok({ work: field_str(item, "work")?, ref: field_str(item, "ref")?, position: JsonValue.as_i64(JsonValue.field(item, "position")?)?, form: field_str(item, "form")?, gloss: field_str(item, "gloss")? })
+
+field_str : JsonValue, Str -> Try(Str, Str)
+field_str = |item, name| JsonValue.as_str(JsonValue.field(item, name)?)

@@ -111,13 +111,13 @@ LibraryView := [].{
 						Engine.element("span", [], [Engine.text("Studying")]),
 						Html.select(
 							Engine.const("Works to study"),
-							model.map(|m| Model.with_default(m.today_scope, "")),
+							model.map(|m| Model.with_default(m.today_scope, all_works)),
 							[],
 							[
-								Html.option("", "All works"),
+								Html.option(all_works, "All works"),
 								Engine.each(model.map(|m| working_on(m).map(|work| { id: work.id, title: work.title })), |work| work.id, |row| Engine.element("option", [Engine.attr_v("value", row.key())], [Engine.text_v(row.field(|work| work.title))])),
 							],
-							Page.act_value(session, Nav.set_today_scope),
+							Page.act_value(session, |m, work| Nav.set_today_scope(m, if work == all_works "" else work)),
 						),
 					],
 				),
@@ -129,16 +129,15 @@ LibraryView := [].{
 	upcoming : State(Page.S, Model.Model), Today.Mode -> Elem(Page.S)
 	upcoming = |session, mode| {
 		model = session.val()
-		next = |m| Today.upcoming(m.clock, mode, m.today_scope, m.entries, m.word_cards)
 		Engine.when(
-			model.map(|m| next(m) != None),
+			model.map(|m| next_due(m, mode) != None),
 			|| Engine.element(
 				"p",
 				[Engine.class("today-summary")],
 				[
 					Engine.text_v(
 						model.map(
-							|m| match next(m) {
+							|m| match next_due(m, mode) {
 								Some((item, due)) => "Next: ${Model.item_name(m, item)} comes back in ${Review.interval_label(m.clock, due)}. "
 								None => ""
 							},
@@ -149,7 +148,7 @@ LibraryView := [].{
 						"text-button",
 						Page.act(
 							session,
-							|m| match next(m) {
+							|m| match next_due(m, mode) {
 								Some((item, _)) => Nav.go(m, Model.item_path(mode, item))
 								None => m
 							},
@@ -423,3 +422,14 @@ sources = |row|
 			Engine.text_v(row.field(|work| work.after_annotations)),
 		],
 	)
+
+next_due : Model.Model, Today.Mode -> [Some((Today.Item, I64)), None]
+next_due = |model, mode| Today.upcoming(model.clock, mode, model.today_scope, model.entries, model.word_cards)
+
+## The "All works" choice of the Today scope (the Elm app's empty value).
+## Workaround: roc-signals 0.3.0 removes an attribute set to "", so an
+## option cannot have the value "" (it would fall back to its label); see
+## https://github.com/thebrandonlucas/roc-issues/tree/master/roc-signals/RS-006-empty-attribute-values.
+## A work id is never "*".
+all_works : Str
+all_works = "*"

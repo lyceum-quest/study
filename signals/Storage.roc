@@ -111,7 +111,6 @@ theme = |model, value|
 
 reader_layers : Model.Model, JsonValue -> Model.Model
 reader_layers = |model, value| {
-	flag = |layers, name| JsonValue.as_bool(JsonValue.field(layers, name)?)
 	decoded = match JsonValue.field(value, "value") {
 		Ok(layers) => match (flag(layers, "glosses"), flag(layers, "morphology"), flag(layers, "translation")) {
 			(Ok(glosses), Ok(morphology), Ok(translation)) => Ok({ glosses, morphology, translation })
@@ -159,3 +158,6 @@ scope = |model, value|
 
 setting_str : JsonValue -> Try(Str, Str)
 setting_str = |value| JsonValue.as_str(JsonValue.field(value, "value")?)
+
+flag : JsonValue, Str -> Try(Bool, Str)
+flag = |layers, name| JsonValue.as_bool(JsonValue.field(layers, name)?)

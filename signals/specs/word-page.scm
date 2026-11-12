@@ -1,0 +1,20 @@
+(test "Words — a word's page lists where it trips you up and every occurrence"
+  (setup
+    (initial-location "/signals/#/word/%CE%B5%E1%BC%B0%CE%BC%CE%AF"))
+  (steps
+    (change (test-id "store") "{\"id\":\"progress:6\",\"ok\":true,\"value\":[{\"id\":\"attempt:demo:1.1:1762819200000\",\"type\":\"attempt\",\"work\":\"demo\",\"passage\":\"1.1\",\"sentenceId\":\"1.1\",\"sentenceText\":\"λόγος , ἦν\",\"startedAt\":1762819100000,\"finishedAt\":1762819200000,\"items\":[{\"key\":\"w:1\",\"kind\":\"word\",\"form\":\"λόγος\",\"lemma\":\"λόγος\",\"guess\":\"word\",\"reference\":\"word\",\"revealedEarly\":false,\"mark\":true},{\"key\":\"w:3\",\"kind\":\"word\",\"form\":\"ἦν\",\"lemma\":\"εἰμί\",\"guess\":\"is\",\"reference\":\"was\",\"revealedEarly\":false,\"mark\":false},{\"key\":\"prose\",\"kind\":\"prose\",\"form\":\"\",\"lemma\":\"\",\"guess\":\"\",\"reference\":\"There was the word\",\"revealedEarly\":false,\"mark\":null}],\"rating\":\"good\"}],\"now\":1762905600000}")
+    (stub-http "manifest" :url "/preload/corpora.json" :status 200 :body "{\"version\":1,\"corpora\":[{\"id\":\"demo\",\"title\":\"Demo Work\",\"path\":\"corpora/demo.conllu\",\"unitsPath\":\"corpora/demo.units.json\",\"passages\":[\"1.1\",\"1.2\"],\"source\":{\"name\":\"Test source\",\"url\":\"https://example.org\",\"commit\":\"abc\",\"license\":\"CC BY-SA 4.0\",\"edition\":\"Test edition\"}}]}")
+    (run-effect 1)
+    (expect-text (text "Finding every occurrence…") "Finding every occurrence…")
+    (stub-http "lemmas" :url "/preload/lemmas.json" :status 200 :body "{\"lemmas\":{\"εἰμί\":[{\"work\":\"demo\",\"ref\":\"1.1\",\"position\":3,\"form\":\"ἦν\",\"gloss\":\"was\"}]},\"passages\":{\"demo\":{\"1.1\":\"λόγος, ἦν\"}}}")
+    (run-effect 2)
+    (expect-text (role heading :name "εἰμί") "εἰμί")
+    (expect-text (text "Forms you've met: ἦν") "Forms you've met: ἦν")
+    (expect-text (role heading :name "Where you struggle") "Where you struggle")
+    (expect-text (text " · missed 1 of 1 · you answered is") " · missed 1 of 1 · you answered is")
+    (expect-text (role heading :name "Every occurrence · 1") "Every occurrence · 1")
+    (expect-text (text " · was") " · was")
+    (click (role link :name "Review now →"))
+    (expect-current-location "/signals/#/review/word/%CE%B5%E1%BC%B0%CE%BC%CE%AF")
+  )
+)

@@ -12,6 +12,7 @@ package
 		Morphology,
 		Review,
 		Route,
+		Stats,
 		Study,
 		Sync,
 		Today,

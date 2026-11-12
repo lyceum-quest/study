@@ -322,7 +322,6 @@ Model := [].{
 		days = floor_div(local, day_ms)
 		minutes_of_day = (local - days * day_ms) // 60000
 		date = civil(days)
-		two = |n| if n < 10 "0${n.to_str()}" else n.to_str()
 		month = match date.month {
 			1 => "Jan"
 			2 => "Feb"
@@ -337,7 +336,26 @@ Model := [].{
 			11 => "Nov"
 			_ => "Dec"
 		}
-		"${date.day.to_str()} ${month} ${date.year.to_str()}, ${two(minutes_of_day // 60)}:${two(minutes_of_day % 60)}"
+		"${date.day.to_str()} ${month} ${date.year.to_str()}, ${two_digits(minutes_of_day // 60)}:${two_digits(minutes_of_day % 60)}"
+	}
+
+	## The lemma of a word page or word review.
+	screen_lemma : Model.Model -> Str
+	screen_lemma = |model|
+		match model.screen {
+			WordScreen(lemma) | WordReviewScreen(lemma) => lemma
+			_ => ""
+		}
+
+	## In today's session: how much is left.
+	session_status : Model.Model -> Str
+	session_status = |model| {
+		today = today_plan(model)
+		scope = match model.today_scope {
+			Some(work) => "${work_name(model, work)} · "
+			None => ""
+		}
+		"Today · ${scope}${counted(today.words.len(), "word", "words")} · ${counted(today.due.len() + today.new.len(), "passage", "passages")} left"
 	}
 
 	## The value of `Some`, else `fallback`.
@@ -376,3 +394,6 @@ civil = |days| {
 	month = if mp < 10 mp + 3 else mp - 9
 	{ year: yoe + era * 400 + (if month <= 2 1 else 0), month, day }
 }
+
+two_digits : I64 -> Str
+two_digits = |n| if n < 10 "0${n.to_str()}" else n.to_str()

@@ -35,6 +35,10 @@ Store := [].{
 	put : Str, Str, JsonValue -> JsonValue
 	put = |id, store, record| message(id, "put", store, [("value", record)])
 
+	## Deletes every record of `store`.
+	clear : Str, Str -> JsonValue
+	clear = |id, store| message(id, "clear", store, [])
+
 	## A `metadata` record: the Elm app keeps settings as `{"key", "value"}`.
 	setting : Str, JsonValue -> JsonValue
 	setting = |key, value| JsonValue.object([("key", JsonValue.str(key)), ("value", value)])

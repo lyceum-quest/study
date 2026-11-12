@@ -88,6 +88,71 @@ WorkspaceView := [].{
 			],
 		)
 	}
+
+	## One select per citation level (Chapter/Verse, Book/Chapter/Section, …) and
+	## a go-to box accepting `1:2` or `1.2`.
+	citation_picker : State(Page.S, Model.Model) -> Elem(Page.S)
+	citation_picker = |session| {
+		model = session.val()
+		Html.div(
+			"citation-picker",
+			[
+				Engine.each(
+					model.map(levels),
+					|level| level.name,
+					|row| Engine.element(
+						"label",
+						[Engine.class("chapter-jump")],
+						[
+							Engine.element("span", [], [Engine.text_v(row.field(|level| level.name))]),
+							Engine.element(
+								"select",
+								[
+									Engine.attr_v("value", row.field(|level| level.current)),
+									Engine.on("change", session.lift_row().set_value_by(row.field(|level| level.prefix), |m, prefix, value| Update.step(m, |x| Workspace.jump_to_citation(x, "${prefix}${value}")))),
+								],
+								[Engine.each(row.field(|level| level.choices), |choice| choice, |option| Engine.element("option", [Engine.attr_v("value", option.key())], [Engine.text_v(option.key())]))],
+							),
+						],
+					),
+				),
+				Engine.element(
+					"input",
+					[
+						Engine.class("citation-go"),
+						Engine.attr_v("placeholder", model.map(|m| if Model.current_label(m).contains(":") "Go to 1:2" else "Go to 1.2")),
+						Html.aria_label("Go to citation"),
+						Engine.on("change", Page.act_value(session, Workspace.go_to_citation)),
+						Engine.on("keydown", session.update(|m| m)),
+					],
+					[],
+				),
+			],
+		)
+	}
+
+	## The open work's citation line (`src/Sources.elm`).
+	active_sources : State(Page.S, Model.Model) -> Elem(Page.S)
+	active_sources = |session| {
+		model = session.val()
+		Engine.when(
+			model.map(|m| active_citation(m) != None),
+			|| Engine.element(
+				"p",
+				[Engine.class("sources-line")],
+				[
+					Engine.element("span", [Engine.class("sources-label")], [Engine.text("Sources ")]),
+					Page.external(citation_text(model, |c| c.text.reader_url), citation_text(model, |c| c.text.edition), citation_text(model, |c| "${c.text.author}, ${c.text.title}")),
+					Engine.text(" ("),
+					Page.external(citation_text(model, |c| c.text.source_url), citation_text(model, |c| "${c.text.repository} ${c.text.snapshot}"), Engine.const("TEI XML")),
+					Engine.text_v(citation_text(model, |c| ", ${c.text.license}) · ")),
+					Page.external(citation_text(model, |c| c.annotations.url), Engine.const("Tokenization, lemmas, morphology, and syntax"), citation_text(model, |c| "${c.annotations.name} ${c.annotations.version}")),
+					Engine.text_v(citation_text(model, |c| " (${c.annotations.license}) · ${c.generated.name} ${c.generated.layers}, generated with ${c.generated.model} (${c.generated.license})")),
+				],
+			),
+			|| Engine.text(""),
+		)
+	}
 }
 
 stage : Model.Model -> Str
@@ -145,7 +210,7 @@ context_bar = |session| {
 						"passage-nav",
 						[
 							Html.button("‹", [Engine.class("icon-button"), Engine.attr("type", "button"), Html.disabled(model.map(|m| m.sentence_index == 0)), Html.aria_label("Previous passage (← or k)")], Page.act(session, Workspace.previous)),
-							citation_picker(session),
+							WorkspaceView.citation_picker(session),
 							Html.button("›", [Engine.class("icon-button"), Engine.attr("type", "button"), Html.disabled(model.map(|m| m.sentence_index + 1 >= m.passages.len())), Html.aria_label("Next passage (→ or j)")], Page.act(session, Workspace.next)),
 						],
 					),
@@ -167,48 +232,6 @@ queue_status = |model|
 		)
 		_ => None
 	}
-
-## One select per citation level (Chapter/Verse, Book/Chapter/Section, …) and
-## a go-to box accepting `1:2` or `1.2`.
-citation_picker : State(Page.S, Model.Model) -> Elem(Page.S)
-citation_picker = |session| {
-	model = session.val()
-	Html.div(
-		"citation-picker",
-		[
-			Engine.each(
-				model.map(levels),
-				|level| level.name,
-				|row| Engine.element(
-					"label",
-					[Engine.class("chapter-jump")],
-					[
-						Engine.element("span", [], [Engine.text_v(row.field(|level| level.name))]),
-						Engine.element(
-							"select",
-							[
-								Engine.attr_v("value", row.field(|level| level.current)),
-								Engine.on("change", session.lift_row().set_value_by(row.field(|level| level.prefix), |m, prefix, value| Update.step(m, |x| Workspace.jump_to_citation(x, "${prefix}${value}")))),
-							],
-							[Engine.each(row.field(|level| level.choices), |choice| choice, |option| Engine.element("option", [Engine.attr_v("value", option.key())], [Engine.text_v(option.key())]))],
-						),
-					],
-				),
-			),
-			Engine.element(
-				"input",
-				[
-					Engine.class("citation-go"),
-					Engine.attr_v("placeholder", model.map(|m| if Model.current_label(m).contains(":") "Go to 1:2" else "Go to 1.2")),
-					Html.aria_label("Go to citation"),
-					Engine.on("change", Page.act_value(session, Workspace.go_to_citation)),
-					Engine.on("keydown", session.update(|m| m)),
-				],
-				[],
-			),
-		],
-	)
-}
 
 levels : Model.Model -> List({ name : Str, prefix : Str, current : Str, choices : List(Str) })
 levels = |model| {
@@ -291,7 +314,7 @@ study_stage = |session| {
 					Html.span_v(model.map(|m| "${Model.current_passage(m).tokens.count_if(|token| Study.is_word_token(token.form)).to_str()} words"), []),
 				],
 			),
-			active_sources(session),
+			WorkspaceView.active_sources(session),
 			tool_tray(session),
 		],
 	)
@@ -362,30 +385,10 @@ cells : Model.Model, Bool -> List(WorkspaceView.Cell)
 cells = |model, grouped| {
 	passage = Model.current_passage(model)
 	asked = Workspace.asked(model)
-	cell = |token, greek, space| {
-		word_key = Study.word_key(token.id)
-		is_asked = Study.is_asked(asked, word_key)
-		{
-			key: token.id.to_str(),
-			id: token.id,
-			word_key,
-			greek,
-			form: token.form,
-			lemma: token.lemma,
-			gloss: token.gloss,
-			is_word: Study.is_word_token(token.form),
-			space,
-			asked: is_asked,
-			repeat: is_asked and asked != None,
-			open: model.popup_word == Some(token.id),
-			revealed: model.study.revealed.contains(word_key),
-			guess: model.study.glosses.get(token.id) ?? "",
-		}
-	}
 	if grouped {
-		Study.group_words(passage.tokens).map(|(token, suffix)| cell(token, "${token.form}${suffix}", Bool.False))
+		Study.group_words(passage.tokens).map(|(token, suffix)| cell_for(model, asked, token, "${token.form}${suffix}", Bool.False))
 	} else {
-		passage.tokens.map_with_index(|token, index| cell(token, token.form, index > 0))
+		passage.tokens.map_with_index(|token, index| cell_for(model, asked, token, token.form, index > 0))
 	}
 }
 
@@ -561,41 +564,6 @@ edition = |model|
 		None => ""
 	}
 
-## The open work's citation line (`src/Sources.elm`).
-active_sources : State(Page.S, Model.Model) -> Elem(Page.S)
-active_sources = |session| {
-	model = session.val()
-	citation = |m|
-		match m.active {
-			Some(work) => work.citation
-			None => None
-		}
-	field = |pick|
-		model.map(
-			|m| match citation(m) {
-				Some(found) => pick(found)
-				None => ""
-			},
-		)
-	Engine.when(
-		model.map(|m| citation(m) != None),
-		|| Engine.element(
-			"p",
-			[Engine.class("sources-line")],
-			[
-				Engine.element("span", [Engine.class("sources-label")], [Engine.text("Sources ")]),
-				Page.external(field(|c| c.text.reader_url), field(|c| c.text.edition), field(|c| "${c.text.author}, ${c.text.title}")),
-				Engine.text(" ("),
-				Page.external(field(|c| c.text.source_url), field(|c| "${c.text.repository} ${c.text.snapshot}"), Engine.const("TEI XML")),
-				Engine.text_v(field(|c| ", ${c.text.license}) · ")),
-				Page.external(field(|c| c.annotations.url), Engine.const("Tokenization, lemmas, morphology, and syntax"), field(|c| "${c.annotations.name} ${c.annotations.version}")),
-				Engine.text_v(field(|c| " (${c.annotations.license}) · ${c.generated.name} ${c.generated.layers}, generated with ${c.generated.model} (${c.generated.license})")),
-			],
-		),
-		|| Engine.text(""),
-	)
-}
-
 ## A translation to write: the learner's draft and a deliberate reveal of the reference.
 translation_field : State(ctx, Model.Model), Val(ctx, Model.Model), Tools.ModuleId -> Elem(ctx)
 translation_field = |state, model, module_id| {
@@ -650,7 +618,6 @@ tool_tray = |session| {
 
 tool_status : Model.Model, Tools.ModuleId -> Str
 tool_status = |model, module_id| {
-	draft_status = |text| if text.trim() == "" "Not started" else "Saved"
 	match module_id {
 		GlossModule => {
 			words = Model.current_passage(model).tokens.keep_if(|token| Study.is_word_token(token.form))
@@ -1151,14 +1118,6 @@ history_entries = |model| {
 			counts = Study.tally(attempt)
 			missed = Study.missed(attempt)
 			older = attempts.get(index + 1)
-			change = |label, now, before|
-				if now == before {
-					Err({})
-				} else if now > before {
-					Ok("+${(now - before).to_str()} ${label}")
-				} else {
-					Ok("−${(before - now).to_str()} ${label}")
-				}
 			previous_missed = match older {
 				Ok(previous) => Study.missed(previous)
 				Err(_) => []
@@ -1174,7 +1133,7 @@ history_entries = |model| {
 				change: match older {
 					Ok(previous) => {
 						before = Study.tally(previous)
-						changes = [change("right", counts.right, before.right), change("wrong", counts.wrong, before.wrong)].keep_oks(|found| found)
+						changes = [tally_change("right", counts.right, before.right), tally_change("wrong", counts.wrong, before.wrong)].keep_oks(|found| found)
 						if changes.is_empty() "Same as the attempt before" else "${Str.join_with(changes, ", ")} since the attempt before"
 					}
 					Err(_) => "First attempt"
@@ -1317,3 +1276,56 @@ marked_count = |model| {
 	found = Workspace.items(model)
 	"${found.count_if(|item| item.mark != None).to_str()} of ${found.len().to_str()} marked"
 }
+
+active_citation : Model.Model -> [Some(Corpus.Citation), None]
+active_citation = |model|
+	match model.active {
+		Some(work) => work.citation
+		None => None
+	}
+
+citation_field : Model.Model, (Corpus.Citation -> Str) -> Str
+citation_field = |model, pick|
+	match active_citation(model) {
+		Some(found) => pick(found)
+		None => ""
+	}
+
+citation_text : Val(Page.S, Model.Model), (Corpus.Citation -> Str) -> Val(Page.S, Str)
+citation_text = |model, pick| model.map(|m| citation_field(m, pick))
+
+cell_for : Model.Model, [Some(Set(Str)), None], Corpus.Token, Str, Bool -> WorkspaceView.Cell
+cell_for = |model, asked, token, greek, space| {
+	word_key = Study.word_key(token.id)
+	is_asked = Study.is_asked(asked, word_key)
+	{
+		key: token.id.to_str(),
+		id: token.id,
+		word_key,
+		greek,
+		form: token.form,
+		lemma: token.lemma,
+		gloss: token.gloss,
+		is_word: Study.is_word_token(token.form),
+		space,
+		asked: is_asked,
+		repeat: is_asked and asked != None,
+		open: model.popup_word == Some(token.id),
+		revealed: model.study.revealed.contains(word_key),
+		guess: model.study.glosses.get(token.id) ?? "",
+	}
+}
+
+draft_status : Str -> Str
+draft_status = |text| if text.trim() == "" "Not started" else "Saved"
+
+## `+2 right`, or nothing when the count is the same.
+tally_change : Str, U64, U64 -> Try(Str, {})
+tally_change = |label, now, before|
+	if now == before {
+		Err({})
+	} else if now > before {
+		Ok("+${(now - before).to_str()} ${label}")
+	} else {
+		Ok("−${(before - now).to_str()} ${label}")
+	}

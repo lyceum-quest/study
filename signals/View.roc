@@ -7,9 +7,15 @@ import Nav
 import Page
 import Storage
 import Update
+import Reader
+import ReaderView
 import Workspace
 import LibraryView
 import WorkspaceView
+import WordsView
+import WhatsNewView
+import StatsView
+import SettingsView
 
 ## The page, ported from `view` and `viewAppHeader` in `src/Main.elm`, and the
 ## app's effect sites: the preload downloads, the `<lyceum-store>` element
@@ -31,14 +37,15 @@ View := [].{
 		Engine.element(
 			"div",
 			[
-				Engine.class_v(model.map(|m| if m.dark "app-shell dark-theme" else "app-shell light-theme")),
+				Engine.class_v(model.map(|m| "app-shell ${if m.dark "dark-theme" else "light-theme"}${if m.screen == ReaderScreen " is-reading" else ""}")),
 				Engine.attr("tabindex", "-1"),
 				Engine.attr("style", "outline: none"),
 				Engine.ref("shell"),
 				Engine.on("keydown", Page.act_value(session, shortcut)),
 			],
 			[
-				header(session),
+				# The reader has its own bar.
+				Engine.when(model.map(|m| m.screen != ReaderScreen), || header(session), || Engine.text("")),
 				Engine.when(
 					model.map(|m| m.notice != ""),
 					|| Html.div_attrs(
@@ -52,12 +59,19 @@ View := [].{
 				),
 				Engine.switch(
 					model.map(screen_name),
-					["library", "workspace", "loading", "elm"],
+					["library", "workspace", "reader", "loading", "today", "word", "word-review", "whats-new", "stats", "settings"],
 					|found| match found {
 						"library" => LibraryView.view(session)
+						"today" => WordsView.today_page(session)
+						"word" => WordsView.word_page(session)
+						"word-review" => WordsView.word_review(session)
+						"whats-new" => WhatsNewView.view(session)
+						"stats" => StatsView.view(session)
+						"settings" => SettingsView.view(session)
 						"workspace" => WorkspaceView.view(session)
+						"reader" => ReaderView.view(session, Page.act(session, toggle_theme), theme_action)
 						"loading" => Engine.element("main", [Engine.class("page")], [Html.p("Loading…", "muted")])
-						_ => elm_page(session)
+						_ => Engine.text("")
 					},
 				),
 				Engine.element(
@@ -91,6 +105,8 @@ View := [].{
 				),
 				Engine.watch(model.map(|m| m.url), |url| if url.serial == 0 [] else if url.push [Push(url.path)] else [Replace(url.path)], session.on_result(|m, _, _| m)),
 				Engine.watch(model.map(Model.document_title), |title| [Title(title)], session.on_result(|m, _, _| m)),
+				Engine.watch(model.map(|m| if m.lemma_index == IndexLoading "/preload/lemmas.json" else ""), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_lemma_index(x, Engine.http_text(res))))),
+				Engine.watch(model.map(|m| if m.changelog == ChangelogLoading "/CHANGELOG.md" else ""), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_changelog(x, Engine.http_text(res))))),
 			],
 		)
 	}
@@ -109,8 +125,14 @@ screen_name : Model.Model -> Str
 screen_name = |model|
 	match model.screen {
 		LibraryScreen => "library"
+		TodayScreen => "today"
+		WordScreen(_) => "word"
+		WordReviewScreen(_) => "word-review"
+		WhatsNewScreen => "whats-new"
+		StatsScreen => "stats"
+		SettingsScreen => "settings"
 		WorkspaceScreen => if model.corpus_ready "workspace" else "loading"
-		_ => "elm"
+		ReaderScreen => if model.corpus_ready "reader" else "loading"
 	}
 
 ## The workspace's keyboard shortcuts (`handleShortcut`).
@@ -119,6 +141,9 @@ shortcut = |model, key|
 	match (model.screen, key) {
 		(WorkspaceScreen, "ArrowLeft") | (WorkspaceScreen, "k") => Workspace.previous(model)
 		(WorkspaceScreen, "ArrowRight") | (WorkspaceScreen, "j") => Workspace.next(model)
+		(ReaderScreen, "ArrowLeft") | (ReaderScreen, "k") => Reader.step(model, -1)
+		(ReaderScreen, "ArrowRight") | (ReaderScreen, "j") => Reader.step(model, 1)
+		(ReaderScreen, "Escape") => Reader.escape(model)
 		(WorkspaceScreen, "Escape") =>
 			if model.history_open {
 				Workspace.close_history(model)
@@ -130,26 +155,9 @@ shortcut = |model, key|
 		_ => model
 	}
 
-## A page still served by the Elm app, beside this one on the same origin.
-elm_page : State(Page.S, Model.Model) -> Elem(Page.S)
-elm_page = |session|
-	Engine.element(
-		"main",
-		[Engine.class("page")],
-		[
-			Engine.element(
-				"p",
-				[Engine.class("muted")],
-				[Engine.text("This page is still in the Elm app. "), Engine.element("a", [Engine.attr_v("href", session.val().map(|m| "/${m.current_path}"))], [Engine.text("Open it there →")])],
-			),
-		],
-	)
-
 header : State(Page.S, Model.Model) -> Elem(Page.S)
 header = |session| {
 	model = session.val()
-	nav_button = |label, active, change|
-		Html.button(label, [Engine.class_v(model.map(|m| if active(m) "global-nav-button is-active" else "global-nav-button")), Engine.attr("type", "button")], Page.act(session, change))
 	Engine.element(
 		"header",
 		[Engine.class("app-header")],
@@ -168,18 +176,18 @@ header = |session| {
 				"nav",
 				[Engine.class("global-nav"), Html.aria_label("Primary navigation")],
 				[
-					nav_button("Home", |m| m.screen == LibraryScreen or m.screen == TodayScreen, |m| Nav.go_route(m, Library)),
-					nav_button("Progress", |m| m.screen == StatsScreen, |m| Nav.go_route(m, Stats)),
+					nav_button(session, "Home", |m| m.screen == LibraryScreen or m.screen == TodayScreen, |m| Nav.go_route(m, Library)),
+					nav_button(session, "Progress", |m| m.screen == StatsScreen, |m| Nav.go_route(m, Stats)),
 					# Supporters don't see it; without an account API it points at lyceum.quest.
 					Engine.element("a", [Engine.class("global-nav-button"), Engine.attr("href", "https://lyceum.quest/pricing"), Engine.attr("target", "_blank"), Engine.attr("rel", "noopener"), Engine.attr("title", "Support Lyceum")], [Engine.text("Support")]),
-					nav_button("What's new", |m| m.screen == WhatsNewScreen, |m| Nav.go_route(m, WhatsNew)),
+					nav_button(session, "What's new", |m| m.screen == WhatsNewScreen, |m| Nav.go_route(m, WhatsNew)),
 					Engine.when(
 						model.map(|m| m.active != None),
 						|| Html.div_attrs(
 							[Engine.attr("style", "display: contents")],
 							[
-								nav_button("Read", |_| Bool.False, |m| Nav.go_route(m, Reader(Model.active_id(m), Some(Model.current_ref(m))))),
-								nav_button("Study", |m| m.screen == WorkspaceScreen or m.screen == SettingsScreen, |m| Nav.start_today_in(m, Model.active_id(m))),
+								nav_button(session, "Read", |_| Bool.False, |m| Nav.go_route(m, Reader(Model.active_id(m), Some(Model.current_ref(m))))),
+								nav_button(session, "Study", |m| m.screen == WorkspaceScreen or m.screen == SettingsScreen, |m| Nav.start_today_in(m, Model.active_id(m))),
 							],
 						),
 						|| Engine.text(""),
@@ -219,3 +227,8 @@ toggle_theme = |model| {
 	dark = !model.dark
 	Model.put_setting({ ..model, dark }, "save", "theme", JsonValue.str(if (dark) "dark" else "light"))
 }
+
+
+nav_button : State(Page.S, Model.Model), Str, (Model.Model -> Bool), (Model.Model -> Model.Model) -> Elem(Page.S)
+nav_button = |session, label, active, change|
+	Html.button(label, [Engine.class_v(session.val().map(|m| if active(m) "global-nav-button is-active" else "global-nav-button")), Engine.attr("type", "button")], Page.act(session, change))
