@@ -8,6 +8,7 @@ package
 		Corpus,
 		Library,
 		Review,
+		Route,
 		Study,
 	]
 	{
