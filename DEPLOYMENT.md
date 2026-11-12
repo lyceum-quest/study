@@ -1,12 +1,12 @@
 # Lyceum Study deployment
 
-Live preview: <https://aristos.internal.blu.cx> (tailnet only), served from the
-development machine by `aristos-preview.service` (`elm-live` on
-`127.0.0.1:8092` in the repository root). It needs no deployment: source edits
-recompile automatically and `kai run fetch-preload` installs the pinned data. The committed
-`config.json` points the preview's "Sign in to sync" at the staging account API,
-`https://lyceum.internal.blu.cx`; while that is unreachable Lyceum Study only notes it
-on the Progress page.
+Preview: <https://study-signals.internal.blu.cx> (tailnet only) serves a copy of
+the working tree, refreshed from blu-tower. It needs no deployment: `kai run
+build-signals` builds the app (`app.wasm` and the pinned `runtime.mjs`, at the
+repository root) and `kai run fetch-preload` installs the pinned data. The
+committed `config.json` points the preview's "Sign in to sync" at the staging
+account API, `https://lyceum.internal.blu.cx`; while that is unreachable Lyceum
+Study only notes it on the Progress page.
 
 ## study.lyceum.quest
 
@@ -25,15 +25,16 @@ kai run bundle -- local         # no account API: no sign-in UI
 ```
 
 The workflows check the tools, fetch the pinned `preload/` (see "Data" below),
-check the browser boundary,
+build the app (`kai run build-signals`), check the browser boundary,
 and run `scripts/build-release.roc <target>`, which writes a self-contained
 site to `dist/aristos/<target>/<version>/` (version
 `<UTC time>-<commit>[-dirty]`) and its name to `dist/aristos/<target>/latest`:
 
 - `index.html`, rewritten to load the assets below;
-- `assets/elm.<hash>.js` (`elm make --optimize`, not minified),
-  `assets/browser-bridge.<hash>.js`, `assets/styles.<hash>.css`, named by the
-  first 16 hex digits of their SHA-256;
+- `assets/app.<hash>.wasm` (`roc build --target=wasm32 --opt=size`),
+  `assets/runtime.<hash>.mjs` (the roc-signals runtime pinned in
+  `signals/runtime.lock.json`), `assets/browser-bridge.<hash>.js`,
+  `assets/styles.<hash>.css`, named by the first 16 hex digits of their SHA-256;
 - `config.json`: `{"accountApi": "<origin>"}`, or `{}` for `local`;
 - `preload/`, copied as fetched.
 

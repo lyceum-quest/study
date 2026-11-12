@@ -6,8 +6,8 @@
 - Read [`DEPLOYMENT.md`](./DEPLOYMENT.md) before changing deployment behavior.
 - Read the relevant plan documents under `docs/plans/` before changing a planned feature.
 - Lyceum Study generates no data. Corpora, passages, and lemmas come from an [Archeion](../archeion) preload release pinned in `preload.lock.json` (see the Data section of `DEPLOYMENT.md`); change the data in Archeion, not here.
-- The Lyceum Study web app is served at <https://aristos.internal.blu.cx> (tailnet only) from this development machine, not from a deploy target. `aristos-preview.service` runs `elm-live` in this repository on `127.0.0.1:8092` (recompiling `elm.js` when `src/` changes and serving the repository root, including `preload/`); `tailscale serve` publishes it as the Tailscale Service `svc:aristos` (<https://aristos.tail42aee1.ts.net>), and Caddy on blu-tower proxies `aristos.internal.blu.cx` to that (see `/etc/nixos/INTERNAL-SERVICES.md` on blu-tower). Source edits are live immediately; data changes appear after `kai run fetch-preload`. `aristos.lyceum.quest` is down and no longer the Lyceum Study site.
-- When a Roc or Elm toolchain bug is discovered:
+- The Lyceum Study web app is a static page: `index.html` at the repository root loads `browser-bridge.js`, which mounts the app module `app.wasm` with the roc-signals runtime `runtime.mjs`. `kai run build-signals` generates both at the root (about ten minutes; never run two Roc builds at once), so any static server on the repository root serves the app with its `preload/`. The working tree is previewed at <https://study-signals.internal.blu.cx> (tailnet only), a copy refreshed from blu-tower; build first, then say there is something new to look at. Staging is <https://study.internal.blu.cx>, deployed only on the owner's go (see `DEPLOYMENT.md`). Data changes appear after `kai run fetch-preload`. `aristos.internal.blu.cx` and `aristos.lyceum.quest` are retired.
+- When a Roc toolchain bug is discovered:
   1. Check whether it has been fixed upstream.
   2. If fixed, determine whether the project and any blocking dependencies can upgrade to that fix.
   3. If no viable upgrade exists, propose a workaround. Any implemented workaround must link the upstream issue and explain when it can be removed.
@@ -15,9 +15,9 @@
 
 ## Language boundary
 
-- Maintained project code must be Kai, Roc, or Elm.
-- Lyceum Study is being ported from Elm to Roc on the [roc-signals](https://github.com/lukewilliamboswell/roc-signals) platform. Until the port is finished, application code may be Elm or Roc; put pure Roc logic in packages under `packages/`.
-- Keep browser JavaScript in `browser-bridge.js` and the roc-signals runtime only. Use the runtime as released and never edit it. `browser-bridge.js` may initialize the app and translate narrow storage messages (Elm ports, or a roc-signals custom element) into IndexedDB operations, but it must not contain corpus parsing, validation, fetching, application state, business logic, or tooling.
+- Maintained project code must be Kai or Roc.
+- Lyceum Study is a Roc app on the [roc-signals](https://github.com/lukewilliamboswell/roc-signals) platform (`signals/`, ported from an Elm app that git history keeps). Put pure Roc logic in packages under `packages/`.
+- Keep browser JavaScript in `browser-bridge.js` and the roc-signals runtime only. Use the runtime as released and never edit it. `browser-bridge.js` may mount the app, hand the runtime a `fetch` that adds credentials (so the account API on another origin gets its session cookie; roc-issues RS-008), and translate narrow storage messages from the app's `<lyceum-store>` element into IndexedDB operations, but it must not contain corpus parsing, validation, any other fetching, application state, business logic, or tooling. `kai run check-browser-boundary` enforces this.
 - Do not maintain Python or shell source.
 - Implement project tooling and scripts in Roc.
 - Declare tooling dependencies and runnable tasks in `Kaifile.roc`.
