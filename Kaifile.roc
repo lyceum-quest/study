@@ -56,6 +56,11 @@ kaifile = Std.kaifile([
 	# Runs tests/ChangelogTest.elm's cases against the Roc port of src/Changelog.elm.
 	Task("test-changelog", [Use("signals"), Run(["roc", "devtools/test-changelog.roc"])]),
 
+	# Runs tests/SyncTest.elm's and tests/ReviewCardsTest.elm's cases against the Roc ports of src/Sync.elm and src/Review.elm.
+	Task("test-sync", [Use("signals"), Run(["roc", "devtools/test-sync.roc"])]),
+
+	Task("test-review-cards", [Use("signals"), Run(["roc", "devtools/test-review-cards.roc"])]),
+
 	# Type-checks the port to roc-signals (signals/: the Elm library and review screens) and its build script.
 	Task("check-signals", [Use("signals"), Run(["roc", "check", "signals/main.roc"])]),
 
