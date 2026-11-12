@@ -30,7 +30,19 @@ kaifile = Std.kaifile([
 			Overlays(["roc"]),
 		],
 	),
+	# The newer Roc compiler that roc-signals 0.3.0 tracks, for the pure Roc packages under packages/ and their tests.
+	Environment(
+		"signals",
+		[
+			Tools([
+				"coreutils",
+				"rocpkgs.nightly-2026-11-07-ad3a5d2",
+			]),
+			Overlays(["roc"]),
+		],
+	),
 	Shell("default", [Use("dev")]),
+	Shell("signals", [Use("signals")]),
 
 	# Embeds tests/fixtures/fsrs/*.json in the generated tests/FsrsFixtures.elm.
 	Task("generate-fsrs-fixtures", [Use("dev"), Run(["roc", "devtools/generate-fsrs-fixtures.roc"])]),
