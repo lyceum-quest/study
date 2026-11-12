@@ -12,6 +12,8 @@ package
 		Review,
 		Route,
 		Study,
+		Today,
+		Words,
 	]
 	{
 		fsrs: "../fsrs/main.roc",
