@@ -6,6 +6,7 @@
 package
 	[
 		Corpus,
+		Library,
 		Review,
 		Study,
 	]

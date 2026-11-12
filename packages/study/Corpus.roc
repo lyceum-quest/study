@@ -10,7 +10,16 @@ import json.JsonValue
 ## items are keyed by that number (`Study.word_key`).
 Corpus := [].{
 
-	Work : { id : Str, title : Str, path : Str, units_path : Str, passages : List(Str), edition : Str }
+	Work : { id : Str, title : Str, path : Str, units_path : Str, passages : List(Str), edition : Str, citation : [Some(Citation), None] }
+
+	## The citation the preload attaches to each work (`src/Sources.elm`): the
+	## original edition, the Opera Graeca Adnotata annotation layer, and Lyceum
+	## Study's generated layers.
+	Citation : {
+		text : { urn : Str, author : Str, title : Str, edition : Str, repository : Str, snapshot : Str, license : Str, reader_url : Str, source_url : Str },
+		annotations : { name : Str, version : Str, url : Str, license : Str },
+		generated : { name : Str, layers : Str, model : Str, license : Str },
+	}
 
 	Token : { tid : Str, form : Str, lemma : Str, gloss : Str, space_after : Bool }
 
@@ -35,6 +44,11 @@ Corpus := [].{
 					},
 					passages: JsonValue.items(JsonValue.field(entry, "passages")?)?.map_try(JsonValue.as_str)?,
 					edition: text(JsonValue.field(entry, "source")?, "edition")?,
+					# As in the Elm app, an entry without a readable citation shows none.
+					citation: match citation(entry) {
+						Ok(found) => Some(found)
+						Err(_) => None
+					},
 				},
 			),
 		).map_ok(|found| found.drop_if(|work| work.units_path == ""))
@@ -148,3 +162,38 @@ field = |value| if value == "_" "" else value
 
 text : JsonValue, Str -> Try(Str, Str)
 text = |json, name| JsonValue.as_str(JsonValue.field(json, name)?)
+
+citation : JsonValue -> Try(Corpus.Citation, Str)
+citation = |entry| {
+	found = JsonValue.field(entry, "citation")?
+	source = JsonValue.field(found, "text")?
+	annotations = JsonValue.field(found, "annotations")?
+	generated = JsonValue.field(found, "generated")?
+	Ok(
+		{
+			text: {
+				urn: text(source, "urn")?,
+				author: text(source, "author")?,
+				title: text(source, "title")?,
+				edition: text(source, "edition")?,
+				repository: text(source, "repository")?,
+				snapshot: text(source, "snapshot")?,
+				license: text(source, "license")?,
+				reader_url: text(source, "readerUrl")?,
+				source_url: text(source, "sourceUrl")?,
+			},
+			annotations: {
+				name: text(annotations, "name")?,
+				version: text(annotations, "version")?,
+				url: text(annotations, "url")?,
+				license: text(annotations, "license")?,
+			},
+			generated: {
+				name: text(generated, "name")?,
+				layers: text(generated, "layers")?,
+				model: text(generated, "model")?,
+				license: text(generated, "license")?,
+			},
+		},
+	)
+}

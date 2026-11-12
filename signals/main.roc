@@ -8,7 +8,7 @@ app [main] {
 import pf.Engine
 import ReviewApp
 
-## The review screen of Lyceum Study on roc-signals 0.3.0:
+## The library and review screens of Lyceum Study on roc-signals 0.3.0:
 ## `roc build --target=wasm32` gives the browser module and
 ## `roc build --target=x64musl` its native spec runner (see Kaifile.roc).
 main : Engine.Program

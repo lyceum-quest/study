@@ -14,13 +14,13 @@ import json.JsonValue
 
 # signals.roc build|specs
 #
-# build: the review screen on roc-signals (signals/) as a static page in dist/signals/: its wasm32 module
+# build: the library and review screens on roc-signals (signals/) as a static page in dist/signals/: its wasm32 module
 # (review.wasm), the roc-signals runtime pinned by URL and SHA-256 in signals/runtime.lock.json (downloaded once,
 # checked every build, never edited), signals/index.html, browser-bridge.js, and styles.css. The page shares the Elm
 # app's IndexedDB database only from the same origin, so serve it beside the Elm app, as the repository root does
 # (/dist/signals/), with preload/ and fonts/ at the root.
 #
-# specs: builds the review screen's native spec runner (dist/signals-specs/review-specs) and runs
+# specs: builds their native spec runner (dist/signals-specs/review-specs) and runs
 # signals/specs/*.scm with it.
 site = "dist/signals"
 

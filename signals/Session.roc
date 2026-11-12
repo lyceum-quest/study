@@ -2,12 +2,16 @@ import fsrs.Fsrs
 import fsrs.FsrsMath
 import json.JsonValue
 import study.Corpus
+import study.Library
 import study.Review
 import study.Study
 import Store
 
-## The review screen's state and every transition over it, in pure Roc; the
-## view and effect sites are in ReviewApp.
+## The library and review screens' state and every transition over it, in
+## pure Roc; the view and effect sites are in ReviewApp.
+##
+## Without a work in the URL (`#/`) the session is the library page: the works
+## being studied and the whole library, searched and sorted (see Library).
 ##
 ## A session reviews one work (`#/<work>` in the URL) through today's queue,
 ## as the Elm app's study session does: its due passages, most overdue first,
@@ -38,7 +42,14 @@ Session := [].{
 		passages : List(Corpus.Passage),
 		entries : Dict(Str, Review.Entry),
 		attempts : List(Study.Attempt),
+		word_reviews : List(Library.Activity),
 		progress_loaded : Bool,
+		# Works the Elm app saved a position in, and its Today scope ("" for all works).
+		positioned : List(Str),
+		today_scope : Str,
+		places_loaded : Bool,
+		search : Str,
+		sort : Library.Sort,
 		settings_loaded : Bool,
 		new_per_day : I64,
 		dark : Bool,
@@ -58,12 +69,36 @@ Session := [].{
 	## the learner's mark (`right`, `wrong` or empty).
 	Word : { key : Str, number : U64, greek : Str, form : Str, guess : Str, reference : Str, mark : Str }
 
+	## One work of the library page as the view shows it: its progress line, the
+	## label of its study link, and its edition and sources (`has_sources` is
+	## false for a work without a citation, as `src/Sources.elm` shows none). `position`
+	## counts from 1 down the list, for the specs.
+	WorkRow : {
+		id : Str,
+		position : Str,
+		title : Str,
+		meta : Str,
+		action : Str,
+		edition : Str,
+		has_sources : Bool,
+		reader_url : Str,
+		source_edition : Str,
+		source_title : Str,
+		source_url : Str,
+		snapshot : Str,
+		after_source : Str,
+		annotations_url : Str,
+		annotations : Str,
+		after_annotations : Str,
+	}
+
 	## The session for the URL `location` (path, query and hash), asking storage
 	## for the progress store and the settings the screen uses.
 	init : Str -> Model
 	init = |location| {
+		work = work_of(location)
 		model = {
-			work: work_of(location),
+			work,
 			works: [],
 			manifest_loaded: Bool.False,
 			conllu: None,
@@ -71,6 +106,12 @@ Session := [].{
 			passages: [],
 			entries: Dict.empty(),
 			attempts: [],
+			word_reviews: [],
+			positioned: [],
+			today_scope: "",
+			places_loaded: Bool.False,
+			search: "",
+			sort: "recent",
 			progress_loaded: Bool.False,
 			settings_loaded: Bool.False,
 			new_per_day: Review.new_per_day_default,
@@ -91,7 +132,7 @@ Session := [].{
 				("progress", |id| Store.get_all(id, "progress")),
 				("settings", |id| Store.get(id, "metadata", "review-settings")),
 				("theme", |id| Store.get(id, "metadata", "theme")),
-			],
+			].concat(if (work == "") places_requests else []),
 		)
 	}
 
@@ -115,7 +156,7 @@ Session := [].{
 		if model.problem != "" {
 			Failed(model.problem)
 		} else if model.work == "" {
-			if (model.manifest_loaded) Choosing else Loading
+			if (model.manifest_loaded and model.progress_loaded) Choosing else Loading
 		} else if !ready {
 			Loading
 		} else if model.current == "" {
@@ -201,6 +242,8 @@ Session := [].{
 						"progress" => settle(receive_progress(timed, response.value))
 						"settings" => settle(receive_settings(timed, response.value))
 						"theme" => receive_theme(timed, response.value)
+						"positions" => receive_positions(timed, response.value)
+						"scope" => receive_scope(timed, response.value)
 						"rating" => finish_rating(timed)
 						_ => timed
 					}
@@ -265,12 +308,22 @@ Session := [].{
 		send({ ..model, dark }, [("save", |id| Store.put(id, "metadata", Store.setting("theme", JsonValue.str(if (dark) "dark" else "light"))))])
 	}
 
-	## The work a new location names; its passages load afresh.
+	set_search : Model, Str -> Model
+	set_search = |model, search| { ..model, search }
+
+	set_sort : Model, Str -> Model
+	set_sort = |model, sort| { ..model, sort }
+
+	## The work a new location names; its passages load afresh. The library
+	## asks for the Elm app's positions and Today scope the first time it opens.
 	navigate : Model, Str -> Model
 	navigate = |model, location| {
 		work = work_of(location)
 		if work == model.work {
 			model
+		} else if work == "" {
+			library = { ..model, work, conllu: None, units: None, passages: [], current: "", opened: Bool.False, draft: empty_draft, rating: None, problem: "" }
+			if (model.places_loaded) library else send(library, places_requests)
 		} else {
 			known = work == "" or !model.manifest_loaded or model.works.any(|found| found.id == work)
 			{
@@ -289,6 +342,17 @@ Session := [].{
 	}
 
 	# VIEW DATA
+
+	## The works being studied, most recent first, then the ones opened.
+	working_rows : Model -> List(WorkRow)
+	working_rows = |model| {
+		opened = if (model.today_scope == "") model.positioned else model.positioned.append(model.today_scope)
+		Library.working_on(model.works, activity(model), opened).map_with_index(|work, index| work_row(model, work, index))
+	}
+
+	## The library as searched and sorted.
+	library_rows : Model -> List(WorkRow)
+	library_rows = |model| Library.shown(model.works, activity(model), model.search, model.sort).map_with_index(|work, index| work_row(model, work, index))
 
 	title : Model -> Str
 	title = |model|
@@ -442,6 +506,54 @@ Session := [].{
 empty_draft : Session.Draft
 empty_draft = { glosses: Dict.empty(), submitted: Bool.False, marks: Dict.empty(), started_at: 0 }
 
+## The Elm app's saved positions (only which works have one) and Today scope.
+places_requests : List((Str, (Str -> JsonValue)))
+places_requests = [
+	("positions", |id| Store.get(id, "metadata", "positions")),
+	("scope", |id| Store.get(id, "metadata", "today-scope")),
+]
+
+activity : Session.Model -> Dict(Str, I64)
+activity = |model| Library.last_activity(model.attempts, model.word_reviews)
+
+work_row : Session.Model, Corpus.Work, U64 -> Session.WorkRow
+work_row = |model, work, index| {
+	row = {
+		id: work.id,
+		position: (index + 1).to_str(),
+		title: work.title,
+		meta: Library.meta(model.clock, work, model.entries),
+		action: if Library.progress(model.clock, work, model.entries).studied == 0 "Start →" else "Study →",
+		edition: work.edition,
+		has_sources: Bool.False,
+		reader_url: "",
+		source_edition: "",
+		source_title: "",
+		source_url: "",
+		snapshot: "",
+		after_source: "",
+		annotations_url: "",
+		annotations: "",
+		after_annotations: "",
+	}
+	match work.citation {
+		None => row
+		Some(found) => {
+			..row,
+			has_sources: Bool.True,
+			reader_url: found.text.reader_url,
+			source_edition: found.text.edition,
+			source_title: "${found.text.author}, ${found.text.title}",
+			source_url: found.text.source_url,
+			snapshot: "${found.text.repository} ${found.text.snapshot}",
+			after_source: ", ${found.text.license}) · ",
+			annotations_url: found.annotations.url,
+			annotations: "${found.annotations.name} ${found.annotations.version}",
+			after_annotations: " (${found.annotations.license}) · ${found.generated.name} ${found.generated.layers}, generated with ${found.generated.model} (${found.generated.license})",
+		}
+	}
+}
+
 ## Issue storage requests as one batch, numbering their ids `<purpose>:<n>`.
 ## A transition calls this at most once: a later batch replaces the outbox.
 send : Session.Model, List((Str, (Str -> JsonValue))) -> Session.Model
@@ -475,7 +587,27 @@ receive_progress = |model, value| {
 	records = JsonValue.items(value) ?? []
 	attempts = records.keep_oks(Study.decode_attempt)
 	stored = Dict.from_list(records.keep_oks(Review.decode_entry).map(|entry| (Review.entry_key(entry.work, entry.passage), entry)))
-	{ ..model, attempts, entries: Review.cards(stored, attempts), progress_loaded: Bool.True }
+	{ ..model, attempts, entries: Review.cards(stored, attempts), word_reviews: records.keep_oks(Library.decode_activity), progress_loaded: Bool.True }
+}
+
+## `{"key": "positions", "value": {"<work>": <passage number>, …}}`, or null.
+receive_positions : Session.Model, JsonValue -> Session.Model
+receive_positions = |model, value| {
+	positioned = match JsonValue.field(value, "value") {
+		Ok(positions) => JsonValue.fields(positions).map(|(work, _)| work)
+		Err(_) => []
+	}
+	{ ..model, positioned, places_loaded: Bool.True }
+}
+
+## `{"key": "today-scope", "value": "<work>"}` ("" for all works), or null.
+receive_scope : Session.Model, JsonValue -> Session.Model
+receive_scope = |model, value| {
+	today_scope = match JsonValue.field(value, "value") {
+		Ok(scope) => JsonValue.as_str(scope) ?? ""
+		Err(_) => ""
+	}
+	{ ..model, today_scope }
 }
 
 ## `{"key": "review-settings", "value": {"newPerDay": n}}`, or null before the
