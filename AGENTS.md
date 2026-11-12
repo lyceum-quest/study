@@ -16,7 +16,8 @@
 ## Language boundary
 
 - Maintained project code must be Kai, Roc, or Elm.
-- Keep browser JavaScript in `browser-bridge.js` only. It may initialize Elm and translate narrow port messages into IndexedDB operations, but it must not contain corpus parsing, validation, fetching, application state, business logic, or tooling.
+- Lyceum Study is being ported from Elm to Roc on the [roc-signals](https://github.com/lukewilliamboswell/roc-signals) platform. Until the port is finished, application code may be Elm or Roc; put pure Roc logic in packages under `packages/`.
+- Keep browser JavaScript in `browser-bridge.js` and the roc-signals runtime only. Use the runtime as released and never edit it. `browser-bridge.js` may initialize the app and translate narrow storage messages (Elm ports, or a roc-signals custom element) into IndexedDB operations, but it must not contain corpus parsing, validation, fetching, application state, business logic, or tooling.
 - Do not maintain Python or shell source.
 - Implement project tooling and scripts in Roc.
 - Declare tooling dependencies and runnable tasks in `Kaifile.roc`.
