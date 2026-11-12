@@ -1,10 +1,12 @@
 import fsrs.Fsrs
 import json.JsonValue
+import study.Account
 import study.Changelog
 import study.Corpus
 import study.Review
 import study.Route
 import study.Study
+import study.Sync
 import study.Today
 import study.Tools
 import study.Words
@@ -26,6 +28,12 @@ Model := [].{
 	Screen : [LibraryScreen, WorkspaceScreen, SettingsScreen, ReaderScreen, TodayScreen, WordScreen(Str), WordReviewScreen(Str), StatsScreen, WhatsNewScreen]
 
 	PopupTab : [WordTab, SentenceTab]
+
+	## An HTTP call to the account API: issued when `serial` changes.
+	Call : { serial : U64, request : Account.HttpRequest }
+
+	no_call : Call
+	no_call = { serial: 0, request: { method: "GET", url: "", headers: [], body: "", timeout_ms: 0 } }
 
 	## What the reader shows with each passage, remembered in IndexedDB.
 	ReaderLayers : { glosses : Bool, morphology : Bool, translation : Bool }
@@ -92,6 +100,23 @@ Model := [].{
 		search : Str,
 		sort : Str,
 		confirm_clear : Bool,
+		# The optional Lyceum account (config.json names its API) and syncing
+		# progress with it. Each HTTP call is issued when its `serial` changes.
+		account : Account,
+		session_call : Call,
+		sign_out_call : Call,
+		sync_call : Call,
+		sync : Sync.State,
+		sync_sent : List(Sync.Outgoing),
+		sync_loaded : Bool,
+		sync_requested : Bool,
+		sync_status : Sync.Status,
+		sync_busy : Bool,
+		# Sync at this clock time (after a rating); 0 when nothing waits.
+		sync_due_at : I64,
+		account_checked_at : I64,
+		# This page's URL without its fragment, where sign-in returns.
+		app_url : Str,
 		# The page.
 		dark : Bool,
 		notice : Str,
@@ -154,6 +179,22 @@ Model := [].{
 		search: "",
 		sort: "recent",
 		confirm_clear: Bool.False,
+		account: NotConfigured,
+		session_call: no_call,
+		sign_out_call: no_call,
+		sync_call: no_call,
+		sync: Sync.empty_state(0),
+		sync_sent: [],
+		sync_loaded: Bool.False,
+		sync_requested: Bool.False,
+		sync_status: NotSyncing,
+		sync_busy: Bool.False,
+		sync_due_at: 0,
+		account_checked_at: 0,
+		app_url: match location.split_first("#") {
+			Ok({ before, .. }) => before
+			Err(_) => location
+		},
 		dark: Bool.True,
 		notice: "",
 		query: Route.query(location),
@@ -338,6 +379,14 @@ Model := [].{
 		}
 		"${date.day.to_str()} ${month} ${date.year.to_str()}, ${two_digits(minutes_of_day // 60)}:${two_digits(minutes_of_day % 60)}"
 	}
+
+	## Whether this device syncs: signed in to an account that includes sync.
+	syncs_progress : Model.Model -> Bool
+	syncs_progress = |model|
+		match model.account {
+			SignedIn(_, user) => Account.has_sync(user)
+			_ => Bool.False
+		}
 
 	## The lemma of a word page or word review.
 	screen_lemma : Model.Model -> Str

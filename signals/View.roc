@@ -10,6 +10,9 @@ import Update
 import Reader
 import ReaderView
 import Workspace
+import AccountView
+import Syncing
+import study.Account
 import LibraryView
 import WorkspaceView
 import WordsView
@@ -94,17 +97,23 @@ View := [].{
 				),
 				Engine.watch(
 					Engine.const({}),
-					|_| [Popstate, Interval(5000), Focus("shell")],
+					|_| [Popstate, Interval(5000), VisibilityChanges, Focus("shell")],
 					session.on_result(
 						|m, _, res| match res {
 							Location(url) => Update.located(m, url)
-							Fired => Update.step(m, Storage.refresh_clock)
+							Fired => Update.step(m, |x| Syncing.tick(Storage.refresh_clock(x)))
+							Visible(Bool.True) => Update.step(m, Syncing.start)
 							_ => m
 						},
 					),
 				),
 				Engine.watch(model.map(|m| m.url), |url| if url.serial == 0 [] else if url.push [Push(url.path)] else [Replace(url.path)], session.on_result(|m, _, _| m)),
 				Engine.watch(model.map(Model.document_title), |title| [Title(title)], session.on_result(|m, _, _| m)),
+				# The account API (config.json) once the library has loaded, then its calls.
+				Engine.watch(model.map(|m| m.manifest_loaded), |loaded| if loaded Syncing.requests({ serial: 1, request: Account.config_request }) else [], session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_config(x, res)))),
+				Engine.watch(model.map(|m| m.session_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_session(x, res)))),
+				Engine.watch(model.map(|m| m.sign_out_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.signed_out(x, res)))),
+				Engine.watch(model.map(|m| m.sync_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_sync(x, res)))),
 				Engine.watch(model.map(|m| if m.lemma_index == IndexLoading "/preload/lemmas.json" else ""), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_lemma_index(x, Engine.http_text(res))))),
 				Engine.watch(model.map(|m| if m.changelog == ChangelogLoading "/CHANGELOG.md" else ""), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_changelog(x, Engine.http_text(res))))),
 			],
@@ -178,8 +187,7 @@ header = |session| {
 				[
 					nav_button(session, "Home", |m| m.screen == LibraryScreen or m.screen == TodayScreen, |m| Nav.go_route(m, Library)),
 					nav_button(session, "Progress", |m| m.screen == StatsScreen, |m| Nav.go_route(m, Stats)),
-					# Supporters don't see it; without an account API it points at lyceum.quest.
-					Engine.element("a", [Engine.class("global-nav-button"), Engine.attr("href", "https://lyceum.quest/pricing"), Engine.attr("target", "_blank"), Engine.attr("rel", "noopener"), Engine.attr("title", "Support Lyceum")], [Engine.text("Support")]),
+					AccountView.support_link(session),
 					nav_button(session, "What's new", |m| m.screen == WhatsNewScreen, |m| Nav.go_route(m, WhatsNew)),
 					Engine.when(
 						model.map(|m| m.active != None),
@@ -197,6 +205,7 @@ header = |session| {
 			Html.div(
 				"header-actions",
 				[
+					AccountView.button(session),
 					Engine.element(
 						"button",
 						[

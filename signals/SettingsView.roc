@@ -234,11 +234,10 @@ progress = |session| {
 			),
 			Engine.when(
 				model.map(|m| m.confirm_clear),
-				# With account sync (not ported yet), the Elm app says the synced progress stays in the account.
 				|| Html.div(
 					"clear-data",
 					[
-						Engine.element("span", [], [Engine.text("Delete all attempts, drafts, and reading positions saved in this browser?")]),
+						Engine.element("span", [], [Engine.text_v(model.map(|m| if Model.syncs_progress(m) "Delete the attempts, drafts, and reading positions saved in this browser? Your synced progress stays in your Lyceum account and comes back on the next sync." else "Delete all attempts, drafts, and reading positions saved in this browser?"))]),
 						Page.button("Delete saved data", "danger-button", Page.act(session, Settings.confirm_clear)),
 						Page.button("Cancel", "secondary-button", Page.act(session, Settings.cancel_clear)),
 					],

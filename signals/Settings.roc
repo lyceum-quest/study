@@ -1,4 +1,5 @@
 import study.Study
+import study.Sync
 import Model
 import Store
 
@@ -24,8 +25,7 @@ Settings := [].{
 	cancel_clear = |model| { ..model, confirm_clear: Bool.False }
 
 	## Deletes the progress and metadata stores and forgets what they held.
-	## Account sync is not ported yet: the Elm app also resets the sync state
-	## here and, when signed in with sync, says the account's progress comes back.
+	## With sync, the device downloads the account's history again.
 	confirm_clear : Model.Model -> Model.Model
 	confirm_clear = |model|
 		Model.send(
@@ -38,7 +38,9 @@ Settings := [].{
 				study: Study.empty_draft,
 				positions: Dict.empty(),
 				confirm_clear: Bool.False,
-				notice: "Saved study data cleared from this device.",
+				notice: if Model.syncs_progress(model) "Saved study data cleared from this device. Your synced progress comes back from your Lyceum account." else "Saved study data cleared from this device.",
+				sync: Sync.empty_state(0),
+				sync_due_at: model.clock + 1,
 			},
 			[
 				("clear", |id| Store.clear(id, "progress")),

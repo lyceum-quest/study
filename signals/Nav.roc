@@ -263,7 +263,7 @@ Nav := [].{
 					Some(mode) => go_today(saved, mode)
 					None => Workspace.advance(saved)
 				}
-				{ ..moved, notice: "" }
+				{ ..moved, notice: "", sync_due_at: now + 3000 }
 			}
 			_ => { ..model, pending_rating: None }
 		}
@@ -295,7 +295,7 @@ Nav := [].{
 							Some(mode) => go_today(recorded, mode)
 							None => go_route(recorded, Word(lemma))
 						}
-						{ ..moved, notice: "" }
+						{ ..moved, notice: "", sync_due_at: now + 3000 }
 					}
 					Err(_) => { ..model, pending_word_rating: None }
 				}

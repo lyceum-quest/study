@@ -1,6 +1,7 @@
 import json.JsonValue
 import study.Review
 import study.Study
+import study.Sync
 import study.Words
 import Model
 import Nav
@@ -33,6 +34,7 @@ Storage := [].{
 						"positions" => positions(timed, value)
 						"settings" => settings(timed, value)
 						"scope" => scope(timed, value)
+						"sync-state" => sync_state(timed, value)
 						"rating" => Nav.finish_rating(timed)
 						"word-rating" => Nav.finish_word_rating(timed)
 						_ => timed
@@ -45,6 +47,25 @@ Storage := [].{
 	## change meanwhile), so intervals and due cards follow the clock.
 	refresh_clock : Model.Model -> Model.Model
 	refresh_clock = |model| Model.send(model, [("settings", |id| Store.get(id, "metadata", "review-settings"))])
+
+	## A setting received from sync (`applySetting`): positions join those here
+	## (received ones win); the others apply as if read from storage.
+	apply_setting : Model.Model, Str, JsonValue -> Model.Model
+	apply_setting = |model, key, value| {
+		record = JsonValue.object([("key", JsonValue.str(key)), ("value", value)])
+		match key {
+			"positions" => { ..model, positions: Sync.merge_positions(model.positions, value) }
+			"theme" => theme(model, record)
+			"reader-layers" => reader_layers(model, record)
+			"review-settings" => settings(model, record)
+			"today-scope" => scope(model, record)
+			_ => model
+		}
+	}
+
+	## The sync state, read once when an account that syncs signs in.
+	load_sync_state : Model.Model -> Model.Model
+	load_sync_state = |model| Model.send({ ..model, sync_requested: Bool.True }, [("sync-state", |id| Store.get(id, "metadata", "sync-state"))])
 
 	## The current passage's saved draft, asked for when the passage opens.
 	load_draft : Model.Model, Str -> Model.Model
@@ -59,6 +80,7 @@ failed = |model, purpose|
 		"rating" => { ..model, pending_rating: None, notice: "The rating could not be saved. Try again." }
 		"word-rating" => { ..model, pending_word_rating: None, notice: "The rating could not be saved. Try again." }
 		"save" => { ..model, notice: "Something could not be saved in this browser's storage." }
+		"sync-state" => { ..model, sync_loaded: Bool.True, sync_due_at: 1 }
 		_ => model
 	}
 
@@ -161,3 +183,14 @@ setting_str = |value| JsonValue.as_str(JsonValue.field(value, "value")?)
 
 flag : JsonValue, Str -> Try(Bool, Str)
 flag = |layers, name| JsonValue.as_bool(JsonValue.field(layers, name)?)
+
+## `{"key": "sync-state", "value": <state>}`, or null on a device that never
+## synced; the next tick syncs.
+sync_state : Model.Model, JsonValue -> Model.Model
+sync_state = |model, value| {
+	state = match JsonValue.field(value, "value") {
+		Ok(stored) => Sync.decode_state(stored) ?? model.sync
+		Err(_) => model.sync
+	}
+	{ ..model, sync: state, sync_loaded: Bool.True, sync_due_at: 1 }
+}

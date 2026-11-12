@@ -1,4 +1,4 @@
-import pf.Engine exposing [Elem, Row, RowRef, State, Val]
+import pf.Engine exposing [Elem, In, Row, RowRef, State, Val]
 import pf.Html
 import study.Corpus
 import study.Review
@@ -6,6 +6,7 @@ import study.Route
 import study.Stats
 import study.Words
 import Model
+import AccountView
 import Page
 
 ## The Progress page, ported from `viewStats`, `viewStatTile` and
@@ -17,21 +18,29 @@ StatsView := [].{
 
 	view : State(Page.S, Model.Model) -> Elem(Page.S)
 	view = |session|
-		Engine.derive(
-			session.val().map(summary),
-			|data| Engine.element(
-				"main",
-				[Engine.class("page stats-page")],
+		Engine.element(
+			"main",
+			[Engine.class("page stats-page")],
+			[
+				Engine.element(
+					"section",
+					[Engine.class("word-header")],
+					[
+						Html.p("Progress", "eyebrow"),
+						Engine.element("h1", [], [Engine.text("Your progress")]),
+					],
+				),
+				AccountView.panel(session),
+				Engine.derive(session.val().map(summary), |data| numbers(data)),
+			],
+		)
+}
+
+numbers : Val(In(Page.S, Summary), Summary) -> Elem(In(Page.S, Summary))
+numbers = |data|
+			Html.div_attrs(
+				[Engine.attr("style", "display: contents")],
 				[
-					Engine.element(
-						"section",
-						[Engine.class("word-header")],
-						[
-							Html.p("Progress", "eyebrow"),
-							Engine.element("h1", [], [Engine.text("Your progress")]),
-						],
-					),
-					# The account panel (`viewAccountPanel`) goes here once account sign-in is ported.
 					Html.div(
 						"stat-tiles",
 						[
@@ -88,9 +97,7 @@ StatsView := [].{
 						],
 					),
 				],
-			),
-		)
-}
+			)
 
 ## A day's column: its date, count, tooltip, height and, on the busiest day, its label.
 Column : { key : Str, date : Str, count : Str, tip : Str, height : Str, peak : Str }

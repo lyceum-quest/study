@@ -39,7 +39,7 @@ main! = |_args| {
 		fail!("maintained JavaScript must be exactly browser-bridge.js; found ${Str.inspect(existing)}")
 	} else if List.len(Str.to_utf8(bridge)) > max_bridge_bytes {
 		fail!("browser-bridge.js exceeds the explicit ${max_bridge_bytes.to_str()}-byte architecture limit")
-	} else if List.any(forbidden_bridge_terms, |term| Str.contains(bridge, term)) {
+	} else if List.any(forbidden_bridge_terms, |term| Str.contains(Str.replace_each(bridge, credentials_fetch, ""), term)) {
 		fail!("browser-bridge.js contains an operation reserved for Elm or Roc")
 	} else if Str.contains(index, "<script>") or Str.contains(index, "<script\n") {
 		fail!("index.html contains inline JavaScript")
@@ -80,6 +80,11 @@ existing_files! = |paths|
 			}
 		}
 	}
+
+## The one fetch the bridge may contain: the fetch it gives the roc-signals
+## runtime, which only adds credentials for the account API (the runtime cannot
+## ask for them; roc-issues RS-008). It makes no request of its own.
+credentials_fetch = "const withCredentials = (url, init) => fetch(url, Object.assign({}, init, { credentials: \"include\" }));"
 
 forbidden_bridge_terms = [
 	"fetch(",

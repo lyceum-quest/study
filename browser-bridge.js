@@ -110,8 +110,11 @@
 
   const node = document.getElementById("app");
 
+  // The runtime's fetch, with credentials for the account API (roc-issues RS-008).
+  const withCredentials = (url, init) => fetch(url, Object.assign({}, init, { credentials: "include" }));
+
   if (node.dataset.wasm) {
-    import(node.dataset.runtime).then((runtime) => runtime.mountRocEngineApp({ wasmUrl: node.dataset.wasm, root: node, onFault: console.error })).catch(console.error);
+    import(node.dataset.runtime).then((runtime) => runtime.mountRocEngineApp({ wasmUrl: node.dataset.wasm, root: node, fetch: withCredentials, onFault: console.error })).catch(console.error);
     return;
   }
 
