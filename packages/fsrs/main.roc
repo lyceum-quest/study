@@ -3,6 +3,7 @@
 ## browser (wasm32) and native hosts alike.
 package
 	[
+		Fsrs,
 		FsrsMath,
 	]
 	{}
