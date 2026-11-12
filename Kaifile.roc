@@ -44,6 +44,9 @@ kaifile = Std.kaifile([
 	Shell("default", [Use("dev")]),
 	Shell("signals", [Use("signals")]),
 
+	# Type-checks the Roc FSRS package (packages/fsrs/), a port of src/Fsrs.elm.
+	Task("check-fsrs-roc", [Use("signals"), Run(["roc", "check", "packages/fsrs/main.roc"])]),
+
 	# Embeds tests/fixtures/fsrs/*.json in the generated tests/FsrsFixtures.elm.
 	Task("generate-fsrs-fixtures", [Use("dev"), Run(["roc", "devtools/generate-fsrs-fixtures.roc"])]),
 
