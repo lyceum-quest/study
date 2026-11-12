@@ -1,12 +1,13 @@
 # Lyceum Study deployment
 
-Preview: <https://study-signals.internal.blu.cx> (tailnet only) serves a copy of
-the working tree, refreshed from blu-tower. It needs no deployment: `kai run
-build-signals` builds the app (`app.wasm` and the pinned `runtime.mjs`, at the
-repository root) and `kai run fetch-preload` installs the pinned data. The
-committed `config.json` points the preview's "Sign in to sync" at the staging
-account API, `https://lyceum.internal.blu.cx`; while that is unreachable Lyceum
-Study only notes it on the Progress page.
+To try a change locally, `kai run build-signals` builds the app (`app.wasm` and
+the pinned `runtime.mjs`, at the repository root) and `kai run fetch-preload`
+installs the pinned data; any static server on the repository root then serves
+it. The committed `config.json` points "Sign in to sync" at the staging account
+API, `https://lyceum.internal.blu.cx`, which accepts sign-ins only from Lyceum
+Study's own sites; while it is unreachable Lyceum Study only notes it on the
+Progress page. The one shared preview is staging,
+<https://study.internal.blu.cx> (below).
 
 ## study.lyceum.quest
 
