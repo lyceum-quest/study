@@ -15,9 +15,6 @@ kaifile = Std.kaifile([
 				"bashInteractive",
 				"coreutils",
 				"curl",
-				"elmPackages.elm",
-				"elmPackages.elm-live",
-				"elmPackages.elm-test",
 				"gh",
 				"git",
 				"gnugrep",
@@ -30,7 +27,8 @@ kaifile = Std.kaifile([
 			Overlays(["roc"]),
 		],
 	),
-	# The newer Roc compiler that roc-signals 0.3.0 tracks, for the pure Roc packages under packages/ and their tests.
+	# The newer Roc compiler that roc-signals 0.3.0 tracks, for the app (signals/), its packages under packages/, and
+	# their tests.
 	Environment(
 		"signals",
 		[
@@ -44,37 +42,36 @@ kaifile = Std.kaifile([
 	Shell("default", [Use("dev")]),
 	Shell("signals", [Use("signals")]),
 
-	# Type-checks the Roc FSRS package (packages/fsrs/), a port of src/Fsrs.elm.
+	# Type-checks the FSRS package (packages/fsrs/).
 	Task("check-fsrs-roc", [Use("signals"), Run(["roc", "check", "packages/fsrs/main.roc"])]),
 
-	# Runs the Roc FSRS package against tests/fixtures/fsrs/*.json, as tests/FsrsTest.elm does for the Elm port.
+	# Runs the FSRS package against the ts-fsrs and fsrs-rs reference outputs in tests/fixtures/fsrs/*.json.
 	Task("test-fsrs-roc", [Use("signals"), Run(["roc", "devtools/test-fsrs.roc"])]),
 
-	# Checks the Roc ports of src/Words.elm and src/Today.elm (word cards, word review records, today's plan).
+	# Checks word cards, word review records and today's plan (packages/study/Words.roc and Today.roc).
 	Task("test-words-today", [Use("signals"), Run(["roc", "devtools/test-words-today.roc"])]),
 
-	# Runs tests/ChangelogTest.elm's cases against the Roc port of src/Changelog.elm.
+	# Checks the CHANGELOG.md parser for the What's new page (packages/study/Changelog.roc).
 	Task("test-changelog", [Use("signals"), Run(["roc", "devtools/test-changelog.roc"])]),
 
-	# Runs tests/SyncTest.elm's and tests/ReviewCardsTest.elm's cases against the Roc ports of src/Sync.elm and src/Review.elm.
+	# Check syncing with the account (packages/study/Sync.roc) and replaying review cards from attempts (Review.roc).
 	Task("test-sync", [Use("signals"), Run(["roc", "devtools/test-sync.roc"])]),
 
 	Task("test-review-cards", [Use("signals"), Run(["roc", "devtools/test-review-cards.roc"])]),
 
-	# Checks the Roc ports of src/Conllu.elm, src/Passage.elm and src/Study.elm (corpus parsing over the real preload, citations, drafts and attempts).
+	# Checks corpus parsing over the real preload, citations, drafts and attempts (packages/study/Corpus.roc and Study.roc).
 	Task("test-corpus", [Use("signals"), Run(["roc", "devtools/test-corpus.roc"])]),
 
-	# Type-checks the port to roc-signals (signals/: the Elm library and review screens) and its build script.
+	# Type-checks the app (signals/, on roc-signals) and its build script.
 	Task("check-signals", [Use("signals"), Run(["roc", "check", "signals/main.roc"])]),
 
 	Task("check-signals-tool", [Use("signals"), Run(["roc", "check", "scripts/signals.roc"])]),
 
-	# Builds the port as a static page in dist/signals/ with the pinned roc-signals runtime
-	# (signals/runtime.lock.json). It shares the Elm app's IndexedDB only when served from the same origin, as from the
-	# repository root at /dist/signals/.
+	# Builds the app module (app.wasm) and fetches the pinned roc-signals runtime (runtime.mjs, see
+	# signals/runtime.lock.json) at the repository root, where index.html loads them.
 	Task("build-signals", [Use("signals"), Run(["roc", "scripts/signals.roc", "build"])]),
 
-	# Runs the port's specs (signals/specs/*.scm) with its native spec runner. Their Chrome replay needs a
+	# Runs the app's specs (signals/specs/*.scm) with its native spec runner. Their Chrome replay needs a
 	# checkout of roc-signals at the release tag (roc-issues roc-signals/RS-003-browser-spec-runner-in-release).
 	Task("test-signals", [Use("signals"), Run(["roc", "scripts/signals.roc", "specs"])]),
 
@@ -85,22 +82,6 @@ kaifile = Std.kaifile([
 			RunTask("check-signals", []),
 			RunTask("test-signals", []),
 			RunTask("build-signals", []),
-		],
-	),
-
-	# Embeds tests/fixtures/fsrs/*.json in the generated tests/FsrsFixtures.elm.
-	Task("generate-fsrs-fixtures", [Use("dev"), Run(["roc", "devtools/generate-fsrs-fixtures.roc"])]),
-
-	Task("check-fsrs-fixtures-tool", [Use("dev"), Run(["roc", "check", "devtools/generate-fsrs-fixtures.roc"])]),
-
-	# Runs the Elm tests (the FSRS port against ts-fsrs and fsrs-rs fixtures).
-	Task("test-elm", [Use("dev"), Run(["elm-test"])]),
-
-	Workflow(
-		"test-fsrs",
-		[
-			RunTask("generate-fsrs-fixtures", []),
-			RunTask("test-elm", []),
 		],
 	),
 
@@ -130,7 +111,8 @@ kaifile = Std.kaifile([
 	# kai run rollback-site -- production|staging   (swaps the host's current and previous releases)
 	Task("rollback-site", [Use("dev"), Run(["roc", "scripts/deploy-site.roc", "rollback"])]),
 
-	# kai workflow release (production) or release-staging: fetch the pinned preload/ and bundle a release for deploy-site.
+	# kai workflow release (production) or release-staging: fetch the pinned preload/, build the app, and bundle a release
+	# for deploy-site.
 	Workflow(
 		"release",
 		[
@@ -139,6 +121,7 @@ kaifile = Std.kaifile([
 			RunTask("check-browser-boundary-tool", []),
 			RunTask("check-deploy-site-tool", []),
 			RunTask("fetch-preload", []),
+			RunTask("build-signals", []),
 			RunTask("check-browser-boundary", []),
 			RunTask("bundle", ["production"]),
 		],
@@ -152,6 +135,7 @@ kaifile = Std.kaifile([
 			RunTask("check-browser-boundary-tool", []),
 			RunTask("check-deploy-site-tool", []),
 			RunTask("fetch-preload", []),
+			RunTask("build-signals", []),
 			RunTask("check-browser-boundary", []),
 			RunTask("bundle", ["staging"]),
 		],

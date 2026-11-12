@@ -8,7 +8,8 @@ import AristosSite
 
 # build-release production|staging|local
 # Writes a self-contained static site to dist/aristos/<target>/<version>/ and its name to
-# dist/aristos/<target>/latest. The Elm bundle, bridge, and stylesheet get content-hashed names under assets/
+# dist/aristos/<target>/latest. The app module and roc-signals runtime (built by the build-signals task), bridge, and
+# stylesheet get content-hashed names under assets/
 # (served with a long immutable cache); index.html, config.json, preload/, and fonts/ keep fixed names (served no-cache,
 # revalidated by ETag). config.json names the target's Lyceum account API.
 main! = |args| {
@@ -18,6 +19,7 @@ main! = |args| {
 	}?
 	api = AristosSite.account_api(target)?
 	_ = require(Path.exists!(Path.utf8("preload/corpora.json"))?, "preload/corpora.json is missing; run the Kai preload task first")?
+	_ = require(Path.exists!(Path.utf8("app.wasm"))? and Path.exists!(Path.utf8("runtime.mjs"))?, "app.wasm or runtime.mjs is missing; run the Kai build-signals task first")?
 	version = version!({})?
 	_ = require(AristosSite.valid_version(version), "Unexpected release name ${version}")?
 	root = AristosSite.dist(target)
@@ -27,17 +29,20 @@ main! = |args| {
 	_ = if Path.exists!(Path.utf8(partial))? Path.delete_all!(Path.utf8(partial))? else {}
 	Path.create_all!(Path.utf8("${partial}/assets"))?
 
-	_ = run!("elm", ["make", "src/Main.elm", "--optimize", "--output=${partial}/assets/elm.js"])?
+	_ = copy!("app.wasm", "${partial}/assets/app.wasm")?
+	_ = copy!("runtime.mjs", "${partial}/assets/runtime.mjs")?
 	_ = copy!("browser-bridge.js", "${partial}/assets/browser-bridge.js")?
 	_ = copy!("styles.css", "${partial}/assets/styles.css")?
-	elm = hashed!(partial, "elm", "js")?
+	app_module = hashed!(partial, "app", "wasm")?
+	runtime = hashed!(partial, "runtime", "mjs")?
 	bridge = hashed!(partial, "browser-bridge", "js")?
 	styles = hashed!(partial, "styles", "css")?
 
 	index = Path.read_utf8!(Path.utf8("index.html"))?
-	_ = require(Str.contains(index, "\"/elm.js\"") and Str.contains(index, "\"/browser-bridge.js\"") and Str.contains(index, "\"/styles.css\""), "index.html no longer references /elm.js, /browser-bridge.js, and /styles.css")?
+	_ = require(Str.contains(index, "\"/app.wasm\"") and Str.contains(index, "\"/runtime.mjs\"") and Str.contains(index, "\"/browser-bridge.js\"") and Str.contains(index, "\"/styles.css\""), "index.html no longer references /app.wasm, /runtime.mjs, /browser-bridge.js, and /styles.css")?
 	rewritten = index
-		.replace_each("\"/elm.js\"", "\"/${elm}\"")
+		.replace_each("\"/app.wasm\"", "\"/${app_module}\"")
+		.replace_each("\"/runtime.mjs\"", "\"/${runtime}\"")
 		.replace_each("\"/browser-bridge.js\"", "\"/${bridge}\"")
 		.replace_each("\"/styles.css\"", "\"/${styles}\"")
 	Path.write_utf8!(Path.utf8("${partial}/index.html"), rewritten)?
@@ -60,7 +65,7 @@ run! = |program, args| {
 }
 
 # CHANGELOG.md without its HTML comments (release drafts) and ### Internal sections, as the What's new page shows
-# it (src/Changelog.elm), so the file the site serves holds nothing more.
+# it (packages/study/Changelog.roc), so the file the site serves holds nothing more.
 public_changelog = |text| "${Str.join_with(keep_public(Str.split_on(text, "\n"), Bool.False, Bool.False, []), "\n")}\n"
 
 keep_public = |lines, in_comment, internal, kept|

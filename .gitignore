@@ -5,14 +5,11 @@
 # Local settings (see .env.example)
 .env
 
-# Elm build cache and generated browser bundle
-elm-stuff/
-elm.js
+# The generated app module and the pinned roc-signals runtime (kai run build-signals)
+/app.wasm
+/runtime.mjs
 dist/
 preload/
-
-# Elm REPL scratch files
-repl-temp-*
 
 # Roc script executables
 /scripts/build-release
@@ -31,6 +28,3 @@ repl-temp-*
 # Local editor and OS files
 .DS_Store
 *~
-
-# Generated Elm test fixtures (devtools/generate-fsrs-fixtures.roc)
-/tests/FsrsFixtures.elm

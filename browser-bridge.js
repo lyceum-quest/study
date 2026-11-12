@@ -1,10 +1,9 @@
 /*
  * The only maintained JavaScript in Lyceum Study.
  *
- * This file initializes Elm (or the roc-signals module #app names) and
- * translates generic storage messages into IndexedDB requests. Fetching,
- * parsing, validation, normalization, and all application decisions belong in
- * Elm or Roc.
+ * This file mounts the roc-signals app #app names and translates generic
+ * storage messages into IndexedDB requests. Fetching, parsing, validation,
+ * normalization, and all application decisions belong in Roc.
  */
 (function () {
   "use strict";
@@ -91,7 +90,7 @@
     });
   }
 
-  // The roc-signals app's port: a batch of messages per data-request, each
+  // The app's storage port: a batch of messages per data-request, each
   // answer (plus "now" and the UTC "offset") as the value of a change event.
   // See signals/Store.roc.
   customElements.define("lyceum-store", class extends HTMLElement {
@@ -113,14 +112,5 @@
   // The runtime's fetch, with credentials for the account API (roc-issues RS-008).
   const withCredentials = (url, init) => fetch(url, Object.assign({}, init, { credentials: "include" }));
 
-  if (node.dataset.wasm) {
-    import(node.dataset.runtime).then((runtime) => runtime.mountRocEngineApp({ wasmUrl: node.dataset.wasm, root: node, fetch: withCredentials, onFault: console.error })).catch(console.error);
-    return;
-  }
-
-  const app = Elm.Main.init({ node: node, flags: null });
-
-  app.ports.storageRequest.subscribe(function (message) {
-    answer(message, app.ports.storageResponse.send);
-  });
+  import(node.dataset.runtime).then((runtime) => runtime.mountRocEngineApp({ wasmUrl: node.dataset.wasm, root: node, fetch: withCredentials, onFault: console.error })).catch(console.error);
 })();

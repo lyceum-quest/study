@@ -14,15 +14,12 @@ import json.JsonValue
 
 # signals.roc build|specs
 #
-# build: the library and review screens on roc-signals (signals/) as a static page in dist/signals/: its wasm32 module
-# (review.wasm), the roc-signals runtime pinned by URL and SHA-256 in signals/runtime.lock.json (downloaded once,
-# checked every build, never edited), signals/index.html, browser-bridge.js, and styles.css. The page shares the Elm
-# app's IndexedDB database only from the same origin, so serve it beside the Elm app, as the repository root does
-# (/dist/signals/), with preload/ and fonts/ at the root.
+# build: the app (signals/) as the files index.html loads beside browser-bridge.js and styles.css: its wasm32 module
+# (app.wasm) and the roc-signals runtime pinned by URL and SHA-256 in signals/runtime.lock.json (runtime.mjs,
+# downloaded once, checked every build, never edited), both generated at the repository root, which serves the app
+# with preload/ and fonts/. The release build bundles the same two files.
 #
-# specs: builds their native spec runner (dist/signals-specs/review-specs) and runs
-# signals/specs/*.scm with it.
-site = "dist/signals"
+# specs: builds the app's native spec runner (dist/signals-specs/review-specs) and runs signals/specs/*.scm with it.
 
 runner = "dist/signals-specs/review-specs"
 
@@ -35,20 +32,15 @@ main! = |args| {
 }
 
 build! = |{}| {
-	Path.create_all!(Path.unix(site))?
-	roc!(["build", "--target=wasm32", "signals/main.roc", "--output=${site}/review.wasm"])?
+	roc!(["build", "--target=wasm32", "--opt=size", "signals/main.roc", "--output=app.wasm"])?
 	runtime!({})?
-	for file in [("signals/index.html", "index.html"), ("browser-bridge.js", "browser-bridge.js"), ("styles.css", "styles.css")] {
-		(source, name) = file
-		Path.write_bytes!(Path.unix("${site}/${name}"), Path.read_bytes!(Path.unix(source))?)?
-	}
-	Stdout.line!("built ${site}/")
+	Stdout.line!("built app.wasm and runtime.mjs")
 }
 
-## The pinned runtime.mjs in dist/signals/, downloaded unless the copy there already matches the pin.
+## The pinned runtime.mjs, downloaded unless the copy there already matches the pin.
 runtime! = |{}| {
 	{ url, pinned } = pin(Path.read_utf8!(Path.unix("signals/runtime.lock.json"))?) ? |message| Lock("signals/runtime.lock.json: ${message}")
-	target = Path.unix("${site}/runtime.mjs")
+	target = Path.unix("runtime.mjs")
 	present = if Path.exists!(target)? sha256(Path.read_bytes!(target)?) == pinned else Bool.False
 	if present {
 		Ok({})
