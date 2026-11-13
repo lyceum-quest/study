@@ -19,7 +19,7 @@ Syncing := [].{
 
 	## The release's account API (`config.json`), asked for once the library
 	## has loaded.
-	receive_config : Model.Model, Engine.Res -> Model.Model
+	receive_config : Model.Model, Engine.Result -> Model.Model
 	receive_config = |model, res|
 		match Account.config_result(response(res)) {
 			Ok(Some(api)) => check_account({ ..model, account: Checking(api) })
@@ -34,7 +34,7 @@ Syncing := [].{
 			None => model
 		}
 
-	receive_session : Model.Model, Engine.Res -> Model.Model
+	receive_session : Model.Model, Engine.Result -> Model.Model
 	receive_session = |model, res|
 		match Account.api(model.account) {
 			Some(api) => {
@@ -58,7 +58,7 @@ Syncing := [].{
 		}
 
 	## Signed out (or not): ask again who is signed in.
-	signed_out : Model.Model, Engine.Res -> Model.Model
+	signed_out : Model.Model, Engine.Result -> Model.Model
 	signed_out = |model, _| check_account(model)
 
 	## Starts a sync round if this device syncs and none is running.
@@ -73,7 +73,7 @@ Syncing := [].{
 
 	## A finished round: received records and settings merge in, cards replay,
 	## and another round follows if the server has more.
-	receive_sync : Model.Model, Engine.Res -> Model.Model
+	receive_sync : Model.Model, Engine.Result -> Model.Model
 	receive_sync = |model, res|
 		match Sync.response_result(response(res)) {
 			Ok(answer) => {
@@ -115,7 +115,7 @@ Syncing := [].{
 	}
 
 	## The Engine request for a call (none before its first serial).
-	requests : Model.Call -> List(Engine.Req)
+	requests : Model.Call -> List(Engine.Request)
 	requests = |found|
 		if found.serial == 0 {
 			[]
@@ -138,7 +138,7 @@ local = |model| {
 }
 
 ## An HTTP result as the Account package reads it.
-response : Engine.Res -> Try(Account.HttpResponse, Account.HttpProblem)
+response : Engine.Result -> Try(Account.HttpResponse, Account.HttpProblem)
 response = |res|
 	match res {
 		Http(found) => Ok({ status: found.status, body: found.body })

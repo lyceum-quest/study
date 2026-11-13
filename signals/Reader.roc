@@ -11,7 +11,7 @@ import Model
 ##
 ## Not ported: the Elm reader follows scrolling (`ReaderScrolled`,
 ## `ReaderSettled`, `ReaderMeasured` make the passage at the top current) and
-## swipes between passages; roc-signals 0.3.0 cannot measure layout
+## swipes between passages; roc-signals 0.5.0 cannot measure layout
 ## (https://github.com/lukewilliamboswell/roc-signals/issues/204, closed in
 ## favour of #211, #213 and #214; roc-issues archive/RS-005-layout-measurement).
 ## Add both once the app is on a release that has those.

@@ -15,7 +15,7 @@ AccountView := [].{
 	## Sign-in in the header, or the signed-in handle (with the sync status).
 	button : State(Page.S, Model.Model) -> Elem(Page.S)
 	button = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.switch(
 			model.map(account_state),
 			["signed-out", "signed-in", "none"],
@@ -23,14 +23,14 @@ AccountView := [].{
 				"signed-out" =>
 					Engine.element(
 						"a",
-						[Engine.class("account-button"), Engine.attr_v("href", model.map(login_href))],
+						[Engine.class("account-button"), Engine.attr_s("href", model.map(login_href))],
 						[Engine.text("Sign in"), Engine.element("span", [Engine.class("account-label")], [Engine.text(" to sync")])],
 					)
 				"signed-in" =>
 					Engine.element(
 						"a",
-						[Engine.class("account-button"), Engine.attr("href", Route.to_path(Stats)), Engine.attr_v("title", model.map(signed_in_title))],
-						[Html.span_v(model.map(handle), [Engine.class("account-handle")])],
+						[Engine.class("account-button"), Engine.attr("href", Route.to_path(Stats)), Engine.attr_s("title", model.map(signed_in_title))],
+						[Html.span_s(model.map(handle), [Engine.class("account-handle")])],
 					)
 				_ => Engine.text("")
 			},
@@ -42,12 +42,12 @@ AccountView := [].{
 	## Supporters don't see it.
 	support_link : State(Page.S, Model.Model) -> Elem(Page.S)
 	support_link = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.when(
 			model.map(|m| !supporter(m)),
 			|| Engine.element(
 				"a",
-				[Engine.class("global-nav-button"), Engine.attr_v("href", model.map(|m| "${origin(m)}/pricing")), Engine.attr("target", "_blank"), Engine.attr("rel", "noopener"), Engine.attr("title", "Support Lyceum")],
+				[Engine.class("global-nav-button"), Engine.attr_s("href", model.map(|m| "${origin(m)}/pricing")), Engine.attr("target", "_blank"), Engine.attr("rel", "noopener"), Engine.attr("title", "Support Lyceum")],
 				[Engine.text("Support")],
 			),
 			|| Engine.text(""),
@@ -57,7 +57,7 @@ AccountView := [].{
 	## The account panel on the Progress page.
 	panel : State(Page.S, Model.Model) -> Elem(Page.S)
 	panel = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.switch(
 			model.map(panel_state),
 			["checking", "unreachable", "signed-out", "synced", "supporter", "none"],
@@ -68,14 +68,14 @@ AccountView := [].{
 					section(
 						[
 							Engine.element("p", [], [Engine.text("Progress is saved on this device only. Sign in with a Lyceum account to sync it across devices.")]),
-							Engine.element("a", [Engine.class("primary-button"), Engine.attr_v("href", model.map(login_href))], [Engine.text("Sign in to sync")]),
+							Engine.element("a", [Engine.class("primary-button"), Engine.attr_s("href", model.map(login_href))], [Engine.text("Sign in to sync")]),
 						],
 					)
 				"synced" =>
 					section(
 						[
 							signed_in_line(session),
-							Html.p_v(model.map(|m| Sync.status_text(m.clock, m.sync_status)), [Engine.class("muted sync-status")]),
+							Html.p_s(model.map(|m| Sync.status_text(m.clock, m.sync_status)), [Engine.class("muted sync-status")]),
 							Html.button("Sync now", [Engine.class("secondary-button"), Engine.attr("type", "button"), Html.disabled(model.map(|m| m.sync_busy))], Page.act(session, Syncing.start)),
 							Page.button("Sign out", "secondary-button", Page.act(session, Syncing.sign_out)),
 						],
@@ -85,7 +85,7 @@ AccountView := [].{
 						[
 							signed_in_line(session),
 							Html.p("Progress is saved on this device. Syncing it across your devices comes with supporting Lyceum.", "muted"),
-							Engine.element("a", [Engine.class("secondary-button"), Engine.attr_v("href", model.map(|m| "${origin(m)}/pricing"))], [Engine.text("Support Lyceum")]),
+							Engine.element("a", [Engine.class("secondary-button"), Engine.attr_s("href", model.map(|m| "${origin(m)}/pricing"))], [Engine.text("Support Lyceum")]),
 							Page.button("Sign out", "secondary-button", Page.act(session, Syncing.sign_out)),
 						],
 					)
@@ -103,7 +103,7 @@ signed_in_line = |session|
 	Engine.element(
 		"p",
 		[],
-		[Engine.text("Signed in to Lyceum as "), Html.span_v(session.val().map(handle), [Engine.class("account-handle")]), Engine.text(".")],
+		[Engine.text("Signed in to Lyceum as "), Html.span_s(session.signal().map(handle), [Engine.class("account-handle")]), Engine.text(".")],
 	)
 
 account_state : Model.Model -> Str

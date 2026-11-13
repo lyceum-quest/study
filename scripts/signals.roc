@@ -1,5 +1,5 @@
 app [main!] {
-	pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.27.0/9yjxqdGTP4xSpSEmDazwTmRsehfRZzA19pwEKkR6fj1g.tar.zst",
+	pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.28.0/2yhxoR7cZPSYbyUzPWULFw8AA6QEcdsgFNRmzu7pZbst.tar.zst",
 	http: "https://github.com/roc-lang/http/releases/download/1.0.0/6ZUwqYhCS8PU9Mo6MF7oV82ET2o7KYb57CLKDq4cq4sS.tar.zst",
 	json: "../packages/json/main.roc",
 }
@@ -66,7 +66,8 @@ pin = |text| {
 
 specs! = |{}| {
 	Path.create_all!(Path.unix("dist/signals-specs"))?
-	roc!(["build", "--target=x64musl", "signals/main.roc", "--output=${runner}"])?
+	# With the dev backend, as roc-signals 0.5.0's own `signals.roc test` builds it: seconds rather than minutes.
+	roc!(["build", "--target=x64musl", "--opt=dev", "signals/main.roc", "--output=${runner}"])?
 	found = Path.list!(Path.unix("signals/specs"))?
 		.map(|path| path.display())
 		.keep_if(|path| path.ends_with(".scm"))

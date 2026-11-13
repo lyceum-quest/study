@@ -31,8 +31,8 @@ View := [].{
 
 	page : State(Page.S, Model.Model) -> Elem(Page.S)
 	page = |session| {
-		model = session.val()
-		# Workaround: roc-signals 0.3.0 delivers key events only to elements of
+		model = session.signal()
+		# Workaround: roc-signals 0.5.0 delivers key events only to elements of
 		# the app, not the document, so the shell takes focus (and keeps it on
 		# clicks inside it) to receive the workspace's shortcuts; text fields
 		# stop their own keys. See
@@ -43,7 +43,7 @@ View := [].{
 		Engine.element(
 			"div",
 			[
-				Engine.class_v(model.map(|m| "app-shell ${if m.dark "dark-theme" else "light-theme"}${if m.screen == ReaderScreen " is-reading" else ""}")),
+				Engine.class_s(model.map(|m| "app-shell ${if m.dark "dark-theme" else "light-theme"}${if m.screen == ReaderScreen " is-reading" else ""}")),
 				Engine.attr("tabindex", "-1"),
 				Engine.attr("style", "outline: none"),
 				Engine.ref("shell"),
@@ -57,7 +57,7 @@ View := [].{
 					|| Html.div_attrs(
 						[Engine.class("notice"), Engine.attr("role", "status")],
 						[
-							Html.span_v(model.map(|m| m.notice), [Engine.test_id("notice")]),
+							Html.span_s(model.map(|m| m.notice), [Engine.test_id("notice")]),
 							Html.button("×", [Engine.attr("type", "button"), Html.aria_label("Dismiss message")], Page.act(session, |m| { ..m, notice: "" })),
 						],
 					),
@@ -82,7 +82,7 @@ View := [].{
 				),
 				Engine.element(
 					"lyceum-store",
-					[Engine.attr("hidden", "true"), Engine.test_id("store"), Engine.attr_v("data-request", model.map(|m| m.outbox)), Engine.on("change", Page.act_value(session, Storage.receive))],
+					[Engine.attr("hidden", "true"), Engine.test_id("store"), Engine.attr_s("data-request", model.map(|m| m.outbox)), Engine.on("change", Page.act_value(session, Storage.receive))],
 					[],
 				),
 				Engine.watch(Engine.const("/preload/corpora.json"), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_manifest(x, Engine.http_text(res))))),
@@ -125,7 +125,7 @@ View := [].{
 }
 
 ## A GET of a preload file, revalidated as the Elm app does; "" asks for nothing.
-download : Str -> List(Engine.Req)
+download : Str -> List(Engine.Request)
 download = |url|
 	if url == "" {
 		[]
@@ -169,7 +169,7 @@ shortcut = |model, key|
 
 header : State(Page.S, Model.Model) -> Elem(Page.S)
 header = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"header",
 		[Engine.class("app-header")],
@@ -214,14 +214,14 @@ header = |session| {
 						[
 							Engine.class("theme-button"),
 							Engine.attr("type", "button"),
-							Html.aria_label_v(model.map(theme_action)),
-							Engine.attr_v("aria-pressed", model.map(|m| if m.dark "true" else "false")),
-							Engine.attr_v("title", model.map(theme_action)),
+							Html.aria_label_s(model.map(theme_action)),
+							Engine.attr_s("aria-pressed", model.map(|m| if m.dark "true" else "false")),
+							Engine.attr_s("title", model.map(theme_action)),
 							Engine.on_click(Page.act(session, toggle_theme)),
 						],
 						[
-							Html.span_v(model.map(|m| if m.dark "☀" else "☾"), [Engine.attr("aria-hidden", "true")]),
-							Html.span_v(model.map(|m| if m.dark "Light" else "Dark"), [Engine.class("theme-label")]),
+							Html.span_s(model.map(|m| if m.dark "☀" else "☾"), [Engine.attr("aria-hidden", "true")]),
+							Html.span_s(model.map(|m| if m.dark "Light" else "Dark"), [Engine.class("theme-label")]),
 						],
 					),
 				],
@@ -243,4 +243,4 @@ toggle_theme = |model| {
 
 nav_button : State(Page.S, Model.Model), Str, (Model.Model -> Bool), (Model.Model -> Model.Model) -> Elem(Page.S)
 nav_button = |session, label, active, change|
-	Html.button(label, [Engine.class_v(session.val().map(|m| if active(m) "global-nav-button is-active" else "global-nav-button")), Engine.attr("type", "button")], Page.act(session, change))
+	Html.button(label, [Engine.class_s(session.signal().map(|m| if active(m) "global-nav-button is-active" else "global-nav-button")), Engine.attr("type", "button")], Page.act(session, change))

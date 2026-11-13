@@ -9,7 +9,7 @@ WhatsNewView := [].{
 
 	view : State(Page.S, Model.Model) -> Elem(Page.S)
 	view = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.element(
 			"section",
 			[Engine.class("whats-new")],
@@ -57,13 +57,13 @@ versions = |model|
 		_ => []
 	}
 
-version_view : Engine.Val(ctx, Version) -> Elem(ctx)
+version_view : Engine.Signal(ctx, Version) -> Elem(ctx)
 version_view = |version|
 	Engine.element(
 		"article",
 		[Engine.class("whats-new-version")],
 		[
-			Engine.element("h2", [], [Engine.text_v(version.map(|v| if v.name == "Unreleased" "Not yet released" else v.name))]),
+			Engine.element("h2", [], [Engine.text_s(version.map(|v| if v.name == "Unreleased" "Not yet released" else v.name))]),
 			Engine.each(
 				version.map(|v| v.sections),
 				|section| section.key,
@@ -71,8 +71,8 @@ version_view = |version|
 					"div",
 					[Engine.attr("style", "display: contents")],
 					[
-						Engine.when(row.field(|section| section.title != ""), || Engine.element("h3", [], [Engine.text_v(row.field(|section| section.title))]), || Engine.text("")),
-						Engine.element("ul", [], [Engine.each(row.field(|section| section.items), |item| item.key, |item| Engine.element("li", [], [Engine.text_v(item.field(|i| i.text))]))]),
+						Engine.when(row.field(|section| section.title != ""), || Engine.element("h3", [], [Engine.text_s(row.field(|section| section.title))]), || Engine.text("")),
+						Engine.element("ul", [], [Engine.each(row.field(|section| section.items), |item| item.key, |item| Engine.element("li", [], [Engine.text_s(item.field(|i| i.text))]))]),
 					],
 				),
 			),

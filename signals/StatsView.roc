@@ -1,4 +1,4 @@
-import pf.Engine exposing [Elem, In, Row, RowRef, State, Val]
+import pf.Engine exposing [Elem, In, Row, RowRef, State, Signal]
 import pf.Html
 import study.Corpus
 import study.Review
@@ -31,12 +31,12 @@ StatsView := [].{
 					],
 				),
 				AccountView.panel(session),
-				Engine.derive(session.val().map(summary), |data| numbers(data)),
+				Engine.derive(session.signal().map(summary), |data| numbers(data)),
 			],
 		)
 }
 
-numbers : Val(In(Page.S, Summary), Summary) -> Elem(In(Page.S, Summary))
+numbers : Signal(In(Page.S, Summary), Summary) -> Elem(In(Page.S, Summary))
 numbers = |data|
 			Html.div_attrs(
 				[Engine.attr("style", "display: contents")],
@@ -212,32 +212,32 @@ chart_data = |title, subtitle, points| {
 	}
 }
 
-tile : Val(ctx, Summary), Str, (Summary -> Str), Val(ctx, Str) -> Elem(ctx)
+tile : Signal(ctx, Summary), Str, (Summary -> Str), Signal(ctx, Str) -> Elem(ctx)
 tile = |data, label, value, note|
 	Html.div(
 		"stat-tile",
 		[
 			Engine.element("span", [Engine.class("stat-tile-label")], [Engine.text(label)]),
-			Html.span_v(data.map(value), [Engine.class("stat-tile-value"), Engine.test_id("tile-${label}")]),
-			Html.span_v(note, [Engine.class("stat-tile-note")]),
+			Html.span_s(data.map(value), [Engine.class("stat-tile-value"), Engine.test_id("tile-${label}")]),
+			Html.span_s(note, [Engine.class("stat-tile-note")]),
 		],
 	)
 
 ## A single hue, so no legend; the busiest day is labelled, every day has a
 ## tooltip, and a table carries the values.
-chart : Str, Val(ctx, Chart) -> Elem(ctx)
+chart : Str, Signal(ctx, Chart) -> Elem(ctx)
 chart = |title, data|
 	Engine.element(
 		"section",
 		[Engine.class("column-chart")],
 		[
 			Engine.element("h3", [Engine.class("chart-title")], [Engine.text(title)]),
-			Html.p_v(data.map(|c| c.subtitle), [Engine.class("chart-subtitle")]),
+			Html.p_s(data.map(|c| c.subtitle), [Engine.class("chart-subtitle")]),
 			Engine.element(
 				"div",
-				[Engine.class("chart-plot"), Engine.attr("role", "img"), Engine.attr_v("aria-label", data.map(|c| c.label))],
+				[Engine.class("chart-plot"), Engine.attr("role", "img"), Engine.attr_s("aria-label", data.map(|c| c.label))],
 				[
-					Html.span_v(data.map(|c| c.peak), [Engine.class("chart-tick")]),
+					Html.span_s(data.map(|c| c.peak), [Engine.class("chart-tick")]),
 					Html.div(
 						"chart-columns",
 						[
@@ -246,10 +246,10 @@ chart = |title, data|
 								|column| column.key,
 								|row| Engine.element(
 									"div",
-									[Engine.class("chart-slot"), Engine.attr_v("data-tip", row.field(|column| column.tip)), Engine.attr("tabindex", "0")],
+									[Engine.class("chart-slot"), Engine.attr_s("data-tip", row.field(|column| column.tip)), Engine.attr("tabindex", "0")],
 									[
-										Engine.when(row.field(|column| column.peak != ""), || Html.span_v(row.field(|column| column.peak), [Engine.class("chart-peak")]), || Engine.text("")),
-										Engine.element("div", [Engine.class("chart-column"), Engine.attr_v("style", row.field(|column| column.height))], []),
+										Engine.when(row.field(|column| column.peak != ""), || Html.span_s(row.field(|column| column.peak), [Engine.class("chart-peak")]), || Engine.text("")),
+										Engine.element("div", [Engine.class("chart-column"), Engine.attr_s("style", row.field(|column| column.height))], []),
 									],
 								),
 							),
@@ -260,7 +260,7 @@ chart = |title, data|
 			Html.div(
 				"chart-axis",
 				[
-					Html.span_v(data.map(|c| c.first), []),
+					Html.span_s(data.map(|c| c.first), []),
 					Engine.element("span", [], [Engine.text("Today")]),
 				],
 			),
@@ -293,24 +293,24 @@ table = |headings, rows|
 		],
 	)
 
-cell : Val(ctx, Str) -> Elem(ctx)
-cell = |value| Engine.element("td", [], [Engine.text_v(value)])
+cell : Signal(ctx, Str) -> Elem(ctx)
+cell = |value| Engine.element("td", [], [Engine.text_s(value)])
 
-link : Val(ctx, Str), Val(ctx, Str) -> Elem(ctx)
-link = |href, label| Engine.element("a", [Engine.attr_v("href", href)], [Engine.text_v(label)])
+link : Signal(ctx, Str), Signal(ctx, Str) -> Elem(ctx)
+link = |href, label| Engine.element("a", [Engine.attr_s("href", href)], [Engine.text_s(label)])
 
 work_row : RowRef(ctx, WorkRow) -> Elem(Row(ctx, WorkRow))
 work_row = |row|
 	Html.div(
 		"work-progress-row",
 		[
-			Html.span_v(row.field(|work| work.title), [Engine.class("work-progress-title")]),
+			Html.span_s(row.field(|work| work.title), [Engine.class("work-progress-title")]),
 			Engine.element(
 				"span",
-				[Engine.class("progress-track"), Engine.attr("role", "img"), Engine.attr_v("aria-label", row.field(|work| work.label))],
-				[Engine.element("span", [Engine.class("progress-fill"), Engine.attr_v("style", row.field(|work| "width: ${work.width}"))], [])],
+				[Engine.class("progress-track"), Engine.attr("role", "img"), Engine.attr_s("aria-label", row.field(|work| work.label))],
+				[Engine.element("span", [Engine.class("progress-fill"), Engine.attr_s("style", row.field(|work| "width: ${work.width}"))], [])],
 			),
-			Html.span_v(row.field(|work| work.count), [Engine.class("work-progress-count"), Engine.test_id_v(row.key().map(|id| "work-${id}"))]),
+			Html.span_s(row.field(|work| work.count), [Engine.class("work-progress-count"), Engine.test_id_s(row.key().map(|id| "work-${id}"))]),
 		],
 	)
 
@@ -321,8 +321,8 @@ missed_row = |row|
 		[],
 		[
 			Engine.element("td", [Engine.attr("lang", "grc")], [link(row.field(|word| word.href), row.field(|word| word.name))]),
-			Engine.element("td", [Engine.test_id_v(row.key().map(|lemma| "missed-${lemma}"))], [Engine.text_v(row.field(|word| word.missed))]),
-			Engine.element("td", [Engine.test_id_v(row.key().map(|lemma| "next-${lemma}"))], [Engine.text_v(row.field(|word| word.next))]),
+			Engine.element("td", [Engine.test_id_s(row.key().map(|lemma| "missed-${lemma}"))], [Engine.text_s(row.field(|word| word.missed))]),
+			Engine.element("td", [Engine.test_id_s(row.key().map(|lemma| "next-${lemma}"))], [Engine.text_s(row.field(|word| word.next))]),
 		],
 	)
 
@@ -333,7 +333,7 @@ hard_row = |row|
 		[],
 		[
 			Engine.element("td", [], [link(row.field(|hard| hard.href), row.field(|hard| hard.name))]),
-			Engine.element("td", [Engine.test_id_v(row.field(|hard| "wrong-${hard.name}"))], [Engine.text_v(row.field(|hard| hard.wrong))]),
-			Engine.element("td", [Engine.test_id_v(row.field(|hard| "attempts-${hard.name}"))], [Engine.text_v(row.field(|hard| hard.attempts))]),
+			Engine.element("td", [Engine.test_id_s(row.field(|hard| "wrong-${hard.name}"))], [Engine.text_s(row.field(|hard| hard.wrong))]),
+			Engine.element("td", [Engine.test_id_s(row.field(|hard| "attempts-${hard.name}"))], [Engine.text_s(row.field(|hard| hard.attempts))]),
 		],
 	)

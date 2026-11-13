@@ -1,4 +1,4 @@
-import pf.Engine exposing [Elem, State, Val]
+import pf.Engine exposing [Elem, State, Signal]
 import pf.Html
 import fsrs.FsrsMath
 import study.Corpus
@@ -19,7 +19,7 @@ SettingsView := [].{
 
 	view : State(Page.S, Model.Model) -> Elem(Page.S)
 	view = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.element(
 			"main",
 			[Engine.class("page settings-page")],
@@ -32,7 +32,7 @@ SettingsView := [].{
 							"div",
 							[],
 							[
-								Html.p_v(model.map(Model.work_title), [Engine.class("eyebrow")]),
+								Html.p_s(model.map(Model.work_title), [Engine.class("eyebrow")]),
 								Engine.element("h1", [], [Engine.text("Study tools")]),
 							],
 						),
@@ -117,17 +117,17 @@ provenance = |model|
 
 preset_card : State(Page.S, Model.Model), Tools.Preset, Str, Str, Str -> Elem(Page.S)
 preset_card = |session, target, title, description, budget| {
-	selected = session.val().map(|m| m.preset == target)
+	selected = session.signal().map(|m| m.preset == target)
 	Engine.element(
 		"button",
 		[
-			Engine.class_v(selected.map(|yes| if yes "preset-card is-selected" else "preset-card")),
+			Engine.class_s(selected.map(|yes| if yes "preset-card is-selected" else "preset-card")),
 			Engine.attr("type", "button"),
 			Engine.on_click(Page.act(session, |m| Workspace.select_preset(m, target))),
 			Html.flag("aria-pressed", selected),
 		],
 		[
-			Html.span_v(selected.map(|yes| if yes "✓" else ""), [Engine.class("preset-check"), Engine.attr("aria-hidden", "true")]),
+			Html.span_s(selected.map(|yes| if yes "✓" else ""), [Engine.class("preset-check"), Engine.attr("aria-hidden", "true")]),
 			Engine.element("span", [Engine.class("preset-title")], [Engine.text(title)]),
 			Engine.element("span", [Engine.class("preset-description")], [Engine.text(description)]),
 			Engine.element("span", [Engine.class("preset-budget")], [Engine.text(budget)]),
@@ -137,11 +137,11 @@ preset_card = |session, target, title, description, budget| {
 
 module_setting : State(Page.S, Model.Model), Tools.ModuleId, Str, Str, (Coverage -> Str), Str -> Elem(Page.S)
 module_setting = |session, module_id, title, description, covered, source| {
-	model = session.val()
+	model = session.signal()
 	enabled = model.map(|m| Tools.module_mode(module_id, m.settings) != ModuleOff)
 	Engine.element(
 		"div",
-		[Engine.class_v(enabled.map(|yes| if yes "module-row is-enabled" else "module-row"))],
+		[Engine.class_s(enabled.map(|yes| if yes "module-row is-enabled" else "module-row"))],
 		[
 			Html.div("module-toggle-wrap", [Html.checkbox(Engine.const("Enable ${title}"), enabled, [], Page.act(session, |m| Workspace.toggle_module(m, module_id)))]),
 			Html.div(
@@ -151,11 +151,11 @@ module_setting = |session, module_id, title, description, covered, source| {
 						"module-title-line",
 						[
 							Engine.element("h3", [], [Engine.text(title)]),
-							Html.span_v(model.map(|m| covered(coverage(m))), [Engine.class("coverage-badge")]),
+							Html.span_s(model.map(|m| covered(coverage(m))), [Engine.class("coverage-badge")]),
 						],
 					),
 					Engine.element("p", [], [Engine.text(description)]),
-					Html.span_v(model.map(|m| "${provenance(m)}${source}"), [Engine.class("provenance")]),
+					Html.span_s(model.map(|m| "${provenance(m)}${source}"), [Engine.class("provenance")]),
 				],
 			),
 		],
@@ -165,7 +165,7 @@ module_setting = |session, module_id, title, description, covered, source| {
 ## The daily limit, the attempts' summary and clearing saved data (`viewProgress`).
 progress : State(Page.S, Model.Model) -> Elem(Page.S)
 progress = |session| {
-	model = session.val()
+	model = session.signal()
 	summary = model.map(|m| Study.stats(m.attempts))
 	Engine.element(
 		"section",
@@ -180,7 +180,7 @@ progress = |session| {
 						"select",
 						[
 							Html.aria_label("New passages per day"),
-							Engine.attr_v("value", model.map(|m| m.new_per_day.to_str())),
+							Engine.attr_s("value", model.map(|m| m.new_per_day.to_str())),
 							Engine.on("change", Page.act_value(session, Nav.set_new_per_day)),
 						],
 						[Html.option("3", "3"), Html.option("5", "5"), Html.option("10", "10"), Html.option("15", "15"), Html.option("20", "20"), Html.option("30", "30")],
@@ -222,8 +222,8 @@ progress = |session| {
 										"span",
 										[Engine.class("struggle")],
 										[
-											Engine.text_v(row.key()),
-											Html.span_v(row.field(|word| "${word.wrong.to_str()} / ${word.judged.to_str()} wrong"), [Engine.class("struggle-count"), Engine.attr("lang", "en"), Engine.test_id_v(row.key().map(|lemma| "struggle-${lemma}"))]),
+											Engine.text_s(row.key()),
+											Html.span_s(row.field(|word| "${word.wrong.to_str()} / ${word.judged.to_str()} wrong"), [Engine.class("struggle-count"), Engine.attr("lang", "en"), Engine.test_id_s(row.key().map(|lemma| "struggle-${lemma}"))]),
 										],
 									),
 								),
@@ -237,7 +237,7 @@ progress = |session| {
 				|| Html.div(
 					"clear-data",
 					[
-						Engine.element("span", [], [Engine.text_v(model.map(|m| if Model.syncs_progress(m) "Delete the attempts, drafts, and reading positions saved in this browser? Your synced progress stays in your Lyceum account and comes back on the next sync." else "Delete all attempts, drafts, and reading positions saved in this browser?"))]),
+						Engine.element("span", [], [Engine.text_s(model.map(|m| if Model.syncs_progress(m) "Delete the attempts, drafts, and reading positions saved in this browser? Your synced progress stays in your Lyceum account and comes back on the next sync." else "Delete all attempts, drafts, and reading positions saved in this browser?"))]),
 						Page.button("Delete saved data", "danger-button", Page.act(session, Settings.confirm_clear)),
 						Page.button("Cancel", "secondary-button", Page.act(session, Settings.cancel_clear)),
 					],
@@ -252,12 +252,12 @@ progress = |session| {
 percent : U64, U64 -> Str
 percent = |part, whole| if whole == 0 "—" else "${(F64.to_i64_try(FsrsMath.round(part.to_f64() * 100.0 / whole.to_f64())) ?? 0).to_str()}%"
 
-stat : Val(ctx, Str), Str, Str -> Elem(ctx)
+stat : Signal(ctx, Str), Str, Str -> Elem(ctx)
 stat = |value, label, id|
 	Html.div(
 		"progress-stat",
 		[
-			Html.span_v(value, [Engine.class("progress-value"), Engine.test_id(id)]),
+			Html.span_s(value, [Engine.class("progress-value"), Engine.test_id(id)]),
 			Engine.element("span", [Engine.class("muted")], [Engine.text(label)]),
 		],
 	)

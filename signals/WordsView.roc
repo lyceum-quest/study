@@ -1,4 +1,4 @@
-import pf.Engine exposing [Elem, State, Val]
+import pf.Engine exposing [Elem, State, Signal]
 import pf.Html
 import fsrs.Fsrs
 import study.Corpus
@@ -20,7 +20,7 @@ WordsView := [].{
 	## what returns next.
 	today_page : State(Page.S, Model.Model) -> Elem(Page.S)
 	today_page = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.element(
 			"main",
 			[Engine.class("page today-page")],
@@ -61,7 +61,7 @@ WordsView := [].{
 									)
 							},
 						),
-						Html.p_v(model.map(today_so_far), [Engine.class("today-summary")]),
+						Html.p_s(model.map(today_so_far), [Engine.class("today-summary")]),
 						Engine.element(
 							"p",
 							[Engine.class("today-continue")],
@@ -77,24 +77,24 @@ WordsView := [].{
 	## last seen), then rate it.
 	word_review : State(Page.S, Model.Model) -> Elem(Page.S)
 	word_review = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.when(
 			model.map(|m| m.word_cards.contains(Model.screen_lemma(m))),
 			|| Engine.element(
 				"main",
 				[Engine.class("page word-review-page")],
 				[
-					Engine.when(model.map(|m| m.today_mode != None), || Html.p_v(model.map(Model.session_status), [Engine.class("session-status")]), || Engine.text("")),
+					Engine.when(model.map(|m| m.today_mode != None), || Html.p_s(model.map(Model.session_status), [Engine.class("session-status")]), || Engine.text("")),
 					Engine.element(
 						"section",
 						[Engine.class("word-review-card")],
 						[
-							Html.p_v(model.map(|m| match context(m) { Some(found) => "Word · ${Model.passage_name(m, found.work, found.passage)}"
+							Html.p_s(model.map(|m| match context(m) { Some(found) => "Word · ${Model.passage_name(m, found.work, found.passage)}"
 								None => "" }), [Engine.class("eyebrow")]),
 							highlighted(model.map(|m| context_text(context(m)))),
 							Html.div_attrs(
 								[Engine.class("word-review-form"), Engine.attr("lang", "grc")],
-								[Html.span_v(context_text_of(model, |found| found.form), [Engine.class("review-form")]), Engine.element("span", [Engine.class("review-lemma")], [Engine.text_v(model.map(|m| Corpus.display_lemma(Model.screen_lemma(m))))])],
+								[Html.span_s(context_text_of(model, |found| found.form), [Engine.class("review-form")]), Engine.element("span", [Engine.class("review-lemma")], [Engine.text_s(model.map(|m| Corpus.display_lemma(Model.screen_lemma(m))))])],
 							),
 							Html.text_input(
 								context_text_of(model, |found| "Meaning of ${found.form}"),
@@ -108,8 +108,8 @@ WordsView := [].{
 								|| Html.div(
 									"word-review-answer",
 									[
-										Html.p_v(context_text_of(model, |found| Corpus.display_gloss(found.gloss)), [Engine.class("reference-answer")]),
-										Html.p_v(model.map(|m| reviewed(m, Model.screen_lemma(m))), [Engine.class("muted")]),
+										Html.p_s(context_text_of(model, |found| Corpus.display_gloss(found.gloss)), [Engine.class("reference-answer")]),
+										Html.p_s(model.map(|m| reviewed(m, Model.screen_lemma(m))), [Engine.class("muted")]),
 										Html.div(
 											"rating-buttons",
 											[word_rating(session, Again, "Again"), word_rating(session, Hard, "Hard"), word_rating(session, Good, "Good"), word_rating(session, Easy, "Easy")],
@@ -122,9 +122,9 @@ WordsView := [].{
 								"p",
 								[Engine.class("today-continue")],
 								[
-									Engine.element("a", [Engine.attr_v("href", model.map(|m| Route.to_path(Word(Model.screen_lemma(m)))))], [Engine.text("Word page →")]),
+									Engine.element("a", [Engine.attr_s("href", model.map(|m| Route.to_path(Word(Model.screen_lemma(m)))))], [Engine.text("Word page →")]),
 									Engine.text(" · "),
-									Engine.element("a", [Engine.attr_v("href", model.map(|m| match context(m) { Some(found) => Route.to_path(Study(found.work, found.passage))
+									Engine.element("a", [Engine.attr_s("href", model.map(|m| match context(m) { Some(found) => Route.to_path(Study(found.work, found.passage))
 										None => "#/" }))], [Engine.text("Open the passage →")]),
 								],
 							),
@@ -135,7 +135,7 @@ WordsView := [].{
 			|| Engine.element(
 				"main",
 				[Engine.class("page word-review-page")],
-				[Html.p("No review card yet: words get one when a passage trips you up on them.", "muted"), Engine.element("a", [Engine.attr_v("href", model.map(|m| Route.to_path(Word(Model.screen_lemma(m)))))], [Engine.text("Word page →")])],
+				[Html.p("No review card yet: words get one when a passage trips you up on them.", "muted"), Engine.element("a", [Engine.attr_s("href", model.map(|m| Route.to_path(Word(Model.screen_lemma(m)))))], [Engine.text("Word page →")])],
 			),
 		)
 	}
@@ -144,7 +144,7 @@ WordsView := [].{
 	## and every place it occurs.
 	word_page : State(Page.S, Model.Model) -> Elem(Page.S)
 	word_page = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.element(
 			"main",
 			[Engine.class("page word-page")],
@@ -154,16 +154,16 @@ WordsView := [].{
 					[Engine.class("word-header")],
 					[
 						Html.p("Word", "eyebrow"),
-						Engine.element("h1", [Engine.attr("lang", "grc")], [Engine.text_v(model.map(|m| Corpus.display_lemma(Model.screen_lemma(m))))]),
+						Engine.element("h1", [Engine.attr("lang", "grc")], [Engine.text_s(model.map(|m| Corpus.display_lemma(Model.screen_lemma(m))))]),
 						Engine.when(
 							model.map(|m| m.word_cards.contains(Model.screen_lemma(m))),
 							|| Html.div(
 								"",
 								[
-									Html.p_v(model.map(|m| card_summary(m, Model.screen_lemma(m))), [Engine.class("today-summary")]),
-									Html.p_v(model.map(|m| match m.word_cards.get(Model.screen_lemma(m)) { Ok(word) => "Forms you've met: ${Str.join_with(word.forms, ", ")}"
+									Html.p_s(model.map(|m| card_summary(m, Model.screen_lemma(m))), [Engine.class("today-summary")]),
+									Html.p_s(model.map(|m| match m.word_cards.get(Model.screen_lemma(m)) { Ok(word) => "Forms you've met: ${Str.join_with(word.forms, ", ")}"
 										Err(_) => "" }), [Engine.class("muted"), Engine.attr("lang", "grc")]),
-									Html.div("today-actions", [Engine.element("a", [Engine.class("primary-button"), Engine.attr_v("href", model.map(|m| Route.to_path(WordReview(Model.screen_lemma(m)))))], [Engine.text("Review now →")])]),
+									Html.div("today-actions", [Engine.element("a", [Engine.class("primary-button"), Engine.attr_s("href", model.map(|m| Route.to_path(WordReview(Model.screen_lemma(m)))))], [Engine.text("Review now →")])]),
 								],
 							),
 							|| Html.p("No review card yet: words get one when a passage trips you up on them.", "muted"),
@@ -204,7 +204,7 @@ WordsView := [].{
 									Html.div_attrs(
 										[Engine.attr("style", "display: contents")],
 										[
-											Engine.element("h2", [], [Engine.text_v(model.map(|m| "Every occurrence · ${everywhere(m, Model.screen_lemma(m)).len().to_str()}"))]),
+											Engine.element("h2", [], [Engine.text_s(model.map(|m| "Every occurrence · ${everywhere(m, Model.screen_lemma(m)).len().to_str()}"))]),
 											Engine.element(
 												"ul",
 												[Engine.class("word-occurrences")],
@@ -212,7 +212,7 @@ WordsView := [].{
 											),
 											Engine.when(
 												model.map(|m| everywhere(m, Model.screen_lemma(m)).len() > 120),
-												|| Html.p_v(model.map(|m| "And ${(everywhere(m, Model.screen_lemma(m)).len() - 120).to_str()} more."), [Engine.class("muted")]),
+												|| Html.p_s(model.map(|m| "And ${(everywhere(m, Model.screen_lemma(m)).len() - 120).to_str()} more."), [Engine.class("muted")]),
 												|| Engine.text(""),
 											),
 										],
@@ -231,21 +231,21 @@ WordsView := [].{
 ## A passage where the word occurs: its link, a note, and its text with the word highlighted.
 Place : { key : Str, path : Str, name : Str, note : Str, text : Str, form : Str }
 
-occurrence_item : Val(ctx, Place) -> Elem(ctx)
+occurrence_item : Signal(ctx, Place) -> Elem(ctx)
 occurrence_item = |place|
 	Engine.element(
 		"li",
 		[],
 		[
-			Engine.element("a", [Engine.attr_v("href", place.map(|p| p.path))], [Engine.text_v(place.map(|p| p.name))]),
-			Html.span_v(place.map(|p| p.note), [Engine.class("muted")]),
+			Engine.element("a", [Engine.attr_s("href", place.map(|p| p.path))], [Engine.text_s(place.map(|p| p.name))]),
+			Html.span_s(place.map(|p| p.note), [Engine.class("muted")]),
 			Engine.when(place.map(|p| p.text != ""), || highlighted(place.map(|p| { text: p.text, form: p.form })), || Engine.text("")),
 		],
 	)
 
 ## The passage text with the first word equal to `form` highlighted
 ## (punctuation ignored).
-highlighted : Val(ctx, { text : Str, form : Str }) -> Elem(ctx)
+highlighted : Signal(ctx, { text : Str, form : Str }) -> Elem(ctx)
 highlighted = |passage|
 	Engine.element(
 		"p",
@@ -258,7 +258,7 @@ highlighted = |passage|
 					"span",
 					[],
 					[
-						Engine.when(row.field(|piece| piece.hit), || Html.span_v(row.field(|piece| piece.text), [Engine.class("context-word")]), || Engine.text_v(row.field(|piece| piece.text))),
+						Engine.when(row.field(|piece| piece.hit), || Html.span_s(row.field(|piece| piece.text), [Engine.class("context-word")]), || Engine.text_s(row.field(|piece| piece.text))),
 						Engine.text(" "),
 					],
 				),
@@ -322,7 +322,7 @@ word_rating = |session, rating, label| {
 	Engine.element(
 		"button",
 		[Engine.class("rating-button"), Engine.attr("type", "button"), Html.aria_label(label), Engine.on_click(Page.act(session, |m| Nav.rate_word(m, rating)))],
-		[Page.strong(label), Html.span_v(session.val().map(interval), [Engine.class("rating-interval")])],
+		[Page.strong(label), Html.span_s(session.signal().map(interval), [Engine.class("rating-interval")])],
 	)
 }
 
@@ -451,5 +451,5 @@ context_field = |model, pick|
 		None => ""
 	}
 
-context_text_of : Val(Page.S, Model.Model), (Words.Occurrence -> Str) -> Val(Page.S, Str)
+context_text_of : Signal(Page.S, Model.Model), (Words.Occurrence -> Str) -> Signal(Page.S, Str)
 context_text_of = |model, pick| model.map(|m| context_field(m, pick))

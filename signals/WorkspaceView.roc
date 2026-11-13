@@ -1,4 +1,4 @@
-import pf.Engine exposing [Elem, Row, RowRef, State, Val]
+import pf.Engine exposing [Elem, Row, RowRef, State, Signal]
 import pf.Html
 import fsrs.Fsrs
 import fsrs.FsrsMath
@@ -19,7 +19,7 @@ import Workspace
 ## study tools, the checkpoint's grading, past attempts, the ends of a queue
 ## or a work, and the footer that moves between them.
 ##
-## Workaround: roc-signals 0.3.0 cannot measure layout, so the word popup
+## Workaround: roc-signals 0.5.0 cannot measure layout, so the word popup
 ## opens in its natural place below the word (the Elm app measures it and
 ## moves it above or sideways to fit); see
 ## https://github.com/lukewilliamboswell/roc-signals/issues/204, closed in
@@ -62,13 +62,13 @@ WorkspaceView := [].{
 
 	view : State(Page.S, Model.Model) -> Elem(Page.S)
 	view = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.element(
 			"main",
 			[Engine.class("workspace-page")],
 			[
 				context_bar(session),
-				Html.div_v(
+				Html.div_s(
 					model.map(|m| if show_tool(m) "workspace-grid has-workbench" else "workspace-grid"),
 					[
 						Engine.switch(
@@ -94,7 +94,7 @@ WorkspaceView := [].{
 	## a go-to box accepting `1:2` or `1.2`.
 	citation_picker : State(Page.S, Model.Model) -> Elem(Page.S)
 	citation_picker = |session| {
-		model = session.val()
+		model = session.signal()
 		Html.div(
 			"citation-picker",
 			[
@@ -105,14 +105,14 @@ WorkspaceView := [].{
 						"label",
 						[Engine.class("chapter-jump")],
 						[
-							Engine.element("span", [], [Engine.text_v(row.field(|level| level.name))]),
+							Engine.element("span", [], [Engine.text_s(row.field(|level| level.name))]),
 							Engine.element(
 								"select",
 								[
-									Engine.attr_v("value", row.field(|level| level.current)),
+									Engine.attr_s("value", row.field(|level| level.current)),
 									Engine.on("change", session.lift_row().set_value_by(row.field(|level| level.prefix), |m, prefix, value| Update.step(m, |x| Workspace.jump_to_citation(x, "${prefix}${value}")))),
 								],
-								[Engine.each(row.field(|level| level.choices), |choice| choice, |option| Engine.element("option", [Engine.attr_v("value", option.key())], [Engine.text_v(option.key())]))],
+								[Engine.each(row.field(|level| level.choices), |choice| choice, |option| Engine.element("option", [Engine.attr_s("value", option.key())], [Engine.text_s(option.key())]))],
 							),
 						],
 					),
@@ -121,7 +121,7 @@ WorkspaceView := [].{
 					"input",
 					[
 						Engine.class("citation-go"),
-						Engine.attr_v("placeholder", model.map(|m| if Model.current_label(m).contains(":") "Go to 1:2" else "Go to 1.2")),
+						Engine.attr_s("placeholder", model.map(|m| if Model.current_label(m).contains(":") "Go to 1:2" else "Go to 1.2")),
 						Html.aria_label("Go to citation"),
 						Engine.on("change", Page.act_value(session, Workspace.go_to_citation)),
 						Engine.on("keydown", session.update(|m| m)),
@@ -135,7 +135,7 @@ WorkspaceView := [].{
 	## The open work's citation line (`src/Sources.elm`).
 	active_sources : State(Page.S, Model.Model) -> Elem(Page.S)
 	active_sources = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.when(
 			model.map(|m| active_citation(m) != None),
 			|| Engine.element(
@@ -146,9 +146,9 @@ WorkspaceView := [].{
 					Page.external(citation_text(model, |c| c.text.reader_url), citation_text(model, |c| c.text.edition), citation_text(model, |c| "${c.text.author}, ${c.text.title}")),
 					Engine.text(" ("),
 					Page.external(citation_text(model, |c| c.text.source_url), citation_text(model, |c| "${c.text.repository} ${c.text.snapshot}"), Engine.const("TEI XML")),
-					Engine.text_v(citation_text(model, |c| ", ${c.text.license}) · ")),
+					Engine.text_s(citation_text(model, |c| ", ${c.text.license}) · ")),
 					Page.external(citation_text(model, |c| c.annotations.url), Engine.const("Tokenization, lemmas, morphology, and syntax"), citation_text(model, |c| "${c.annotations.name} ${c.annotations.version}")),
-					Engine.text_v(citation_text(model, |c| " (${c.annotations.license}) · ${c.generated.name} ${c.generated.layers}, generated with ${c.generated.model} (${c.generated.license})")),
+					Engine.text_s(citation_text(model, |c| " (${c.annotations.license}) · ${c.generated.name} ${c.generated.layers}, generated with ${c.generated.model} (${c.generated.license})")),
 				],
 			),
 			|| Engine.text(""),
@@ -181,7 +181,7 @@ show_settings = |model| { ..model, screen: SettingsScreen, notice: "", popup_wor
 
 context_bar : State(Page.S, Model.Model) -> Elem(Page.S)
 context_bar = |session| {
-	model = session.val()
+	model = session.signal()
 	Html.div(
 		"work-context-bar",
 		[
@@ -189,7 +189,7 @@ context_bar = |session| {
 				"context-title",
 				[
 					Html.button("←", [Engine.class("icon-button"), Engine.attr("type", "button"), Html.aria_label("Back to library")], Page.act(session, show_library)),
-					Html.div("", [Html.span_v(model.map(Model.work_title), [Engine.class("context-work")])]),
+					Html.div("", [Html.span_s(model.map(Model.work_title), [Engine.class("context-work")])]),
 				],
 			),
 			Engine.when(
@@ -198,8 +198,8 @@ context_bar = |session| {
 					"span",
 					[Engine.class("queue-status")],
 					[
-						Html.span_v(model.map(|m| Model.with_default(queue_status(m), { kind: "", left: "" }).kind), [Engine.class("queue-kind"), Engine.test_id("queue-kind")]),
-						Html.span_v(model.map(|m| Model.with_default(queue_status(m), { kind: "", left: "" }).left), [Engine.test_id("queue-left")]),
+						Html.span_s(model.map(|m| Model.with_default(queue_status(m), { kind: "", left: "" }).kind), [Engine.class("queue-kind"), Engine.test_id("queue-kind")]),
+						Html.span_s(model.map(|m| Model.with_default(queue_status(m), { kind: "", left: "" }).left), [Engine.test_id("queue-left")]),
 					],
 				),
 				|| Engine.text(""),
@@ -260,7 +260,7 @@ levels = |model| {
 
 study_stage : State(Page.S, Model.Model) -> Elem(Page.S)
 study_stage = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"section",
 		[Engine.class("reading-stage")],
@@ -311,8 +311,8 @@ study_stage = |session| {
 			Html.div(
 				"source-line",
 				[
-					Html.span_v(model.map(edition), []),
-					Html.span_v(model.map(|m| "${Model.current_passage(m).tokens.count_if(|token| Study.is_word_token(token.form)).to_str()} words"), []),
+					Html.span_s(model.map(edition), []),
+					Html.span_s(model.map(|m| "${Model.current_passage(m).tokens.count_if(|token| Study.is_word_token(token.form)).to_str()} words"), []),
 				],
 			),
 			WorkspaceView.active_sources(session),
@@ -340,10 +340,10 @@ instruction = |model|
 ## In today's session: how much is left.
 session_status : State(Page.S, Model.Model) -> Elem(Page.S)
 session_status = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.when(
 		model.map(|m| m.today_mode != None),
-		|| Html.p_v(
+		|| Html.p_s(
 			model.map(
 				|m| {
 					today = Model.today_plan(m)
@@ -363,10 +363,10 @@ session_status = |session| {
 ## The way into the passage's history; absent until the passage has been graded once.
 history_link : State(Page.S, Model.Model) -> Elem(Page.S)
 history_link = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.when(
 		model.map(|m| !Workspace.current_attempts(m).is_empty()),
-		|| Html.button_v(
+		|| Html.button_s(
 			model.map(
 				|m| {
 					count = Workspace.current_attempts(m).len()
@@ -400,7 +400,7 @@ study_cell : State(Page.S, Model.Model), RowRef(Page.S, WorkspaceView.Cell) -> E
 study_cell = |session, row| {
 	rows = session.lift_row()
 	id = row.field(|cell| cell.id)
-	Html.div_v(
+	Html.div_s(
 		row.field(|cell| "interlinear-word study-cell${if cell.repeat " is-repeat" else ""}${if cell.asked "" else " is-settled"}"),
 		[
 			Engine.element(
@@ -410,13 +410,13 @@ study_cell = |session, row| {
 					Engine.element(
 						"button",
 						[
-							Engine.class_v(row.field(|cell| "interlinear-greek study-cell-greek${if cell.open " is-open" else ""}${if cell.revealed " is-revealed" else ""}")),
+							Engine.class_s(row.field(|cell| "interlinear-greek study-cell-greek${if cell.open " is-open" else ""}${if cell.revealed " is-revealed" else ""}")),
 							Engine.attr("type", "button"),
 							Engine.attr("lang", "grc"),
-							Engine.attr_v("aria-expanded", row.field(|cell| if cell.open "true" else "false")),
+							Engine.attr_s("aria-expanded", row.field(|cell| if cell.open "true" else "false")),
 							Engine.on_click(rows.update_by(id, |m, token| Update.step(m, |x| Workspace.toggle_popup(x, token)))),
 						],
-						[Engine.text_v(row.field(|cell| cell.greek))],
+						[Engine.text_s(row.field(|cell| cell.greek))],
 					),
 					Engine.when(row.field(|cell| cell.open), || popup(session, row), || Engine.text("")),
 				],
@@ -432,7 +432,7 @@ study_cell = |session, row| {
 				),
 				|| Engine.text(""),
 			),
-			Engine.when(row.field(|cell| cell.revealed), || Html.span_v(row.field(|cell| Corpus.display_gloss(cell.gloss)), [Engine.class("interlinear-reference")]), || Engine.text("")),
+			Engine.when(row.field(|cell| cell.revealed), || Html.span_s(row.field(|cell| Corpus.display_gloss(cell.gloss)), [Engine.class("interlinear-reference")]), || Engine.text("")),
 		],
 	)
 }
@@ -446,7 +446,7 @@ study_token = |session, row| {
 	Engine.element("span", [Engine.attr("style", "display: contents")], [study_token_body(rows, row, id, session)])
 }
 
-study_token_body : State(Row(Page.S, WorkspaceView.Cell), Model.Model), RowRef(Page.S, WorkspaceView.Cell), Val(Row(Page.S, WorkspaceView.Cell), U64), State(Page.S, Model.Model) -> Elem(Row(Page.S, WorkspaceView.Cell))
+study_token_body : State(Row(Page.S, WorkspaceView.Cell), Model.Model), RowRef(Page.S, WorkspaceView.Cell), Signal(Row(Page.S, WorkspaceView.Cell), U64), State(Page.S, Model.Model) -> Elem(Row(Page.S, WorkspaceView.Cell))
 study_token_body = |rows, row, id, session| {
 	Engine.when(
 		row.field(|cell| cell.is_word),
@@ -454,7 +454,7 @@ study_token_body = |rows, row, id, session| {
 			"span",
 			[],
 			[
-				Engine.text_v(row.field(|cell| if cell.space " " else "")),
+				Engine.text_s(row.field(|cell| if cell.space " " else "")),
 				Engine.element(
 					"span",
 					[Engine.class("study-token-wrap")],
@@ -462,19 +462,19 @@ study_token_body = |rows, row, id, session| {
 						Engine.element(
 							"button",
 							[
-								Engine.class_v(row.field(|cell| "study-token${if cell.guess.trim() != "" " has-guess" else ""}${if cell.revealed " is-revealed" else ""}${if cell.open " is-open" else ""}")),
+								Engine.class_s(row.field(|cell| "study-token${if cell.guess.trim() != "" " has-guess" else ""}${if cell.revealed " is-revealed" else ""}${if cell.open " is-open" else ""}")),
 								Engine.attr("type", "button"),
-								Engine.attr_v("aria-expanded", row.field(|cell| if cell.open "true" else "false")),
+								Engine.attr_s("aria-expanded", row.field(|cell| if cell.open "true" else "false")),
 								Engine.on_click(rows.update_by(id, |m, token| Update.step(m, |x| Workspace.toggle_popup(x, token)))),
 							],
-							[Engine.text_v(row.field(|cell| cell.form))],
+							[Engine.text_s(row.field(|cell| cell.form))],
 						),
 						Engine.when(row.field(|cell| cell.open), || popup(session, row), || Engine.text("")),
 					],
 				),
 			],
 		),
-		|| Html.span_v(row.field(|cell| cell.form), [Engine.class("study-punctuation")]),
+		|| Html.span_s(row.field(|cell| cell.form), [Engine.class("study-punctuation")]),
 	)
 }
 
@@ -483,7 +483,7 @@ study_token_body = |rows, row, id, session| {
 popup : State(Page.S, Model.Model), RowRef(Page.S, WorkspaceView.Cell) -> Elem(Row(Page.S, WorkspaceView.Cell))
 popup = |session, row| {
 	rows = session.lift_row()
-	model = session.val().lift_row()
+	model = session.signal().lift_row()
 	close = rows.update(|m| Update.step(m, Workspace.close_popup))
 	Html.div_attrs(
 		[],
@@ -495,8 +495,8 @@ popup = |session, row| {
 					Html.div(
 						"popup-tabs",
 						[
-							Html.button("Word", [Engine.class_v(model.map(|m| if m.popup_tab == WordTab "popup-tab is-active" else "popup-tab")), Engine.attr("type", "button")], rows.update(|m| Update.step(m, |x| Workspace.set_popup_tab(x, WordTab)))),
-							Html.button("Sentence", [Engine.class_v(model.map(|m| if m.popup_tab == SentenceTab "popup-tab is-active" else "popup-tab")), Engine.attr("type", "button")], rows.update(|m| Update.step(m, |x| Workspace.set_popup_tab(x, SentenceTab)))),
+							Html.button("Word", [Engine.class_s(model.map(|m| if m.popup_tab == WordTab "popup-tab is-active" else "popup-tab")), Engine.attr("type", "button")], rows.update(|m| Update.step(m, |x| Workspace.set_popup_tab(x, WordTab)))),
+							Html.button("Sentence", [Engine.class_s(model.map(|m| if m.popup_tab == SentenceTab "popup-tab is-active" else "popup-tab")), Engine.attr("type", "button")], rows.update(|m| Update.step(m, |x| Workspace.set_popup_tab(x, SentenceTab)))),
 							Html.button("×", [Engine.class("popup-close"), Engine.attr("type", "button"), Html.aria_label("Close")], close),
 						],
 					),
@@ -535,12 +535,12 @@ gloss_field = |rows, row, heading| {
 					"p",
 					[Engine.class("popup-form")],
 					[
-						Html.span_v(row.field(|cell| cell.form), [Engine.attr("lang", "grc")]),
-						Engine.element("a", [Engine.class("muted popup-lemma"), Engine.attr("lang", "grc"), Engine.attr_v("href", row.field(|cell| Route.to_path(Word(cell.lemma))))], [Engine.text_v(row.field(|cell| "${Corpus.display_lemma(cell.lemma)} →"))]),
+						Html.span_s(row.field(|cell| cell.form), [Engine.attr("lang", "grc")]),
+						Engine.element("a", [Engine.class("muted popup-lemma"), Engine.attr("lang", "grc"), Engine.attr_s("href", row.field(|cell| Route.to_path(Word(cell.lemma))))], [Engine.text_s(row.field(|cell| "${Corpus.display_lemma(cell.lemma)} →"))]),
 					],
 				)
 			} else {
-				Html.span_v(row.field(|cell| cell.form), [Engine.class("gloss-row-form"), Engine.attr("lang", "grc")])
+				Html.span_s(row.field(|cell| cell.form), [Engine.class("gloss-row-form"), Engine.attr("lang", "grc")])
 			},
 			Html.text_input(
 				row.field(|cell| "Your gloss for ${cell.form}"),
@@ -551,7 +551,7 @@ gloss_field = |rows, row, heading| {
 			),
 			Engine.when(
 				row.field(|cell| cell.revealed),
-				|| Html.span_v(row.field(|cell| Corpus.display_gloss(cell.gloss)), [Engine.class("reference-answer")]),
+				|| Html.span_s(row.field(|cell| Corpus.display_gloss(cell.gloss)), [Engine.class("reference-answer")]),
 				|| Html.button("Reveal", [Engine.class("reveal-button"), Engine.attr("type", "button"), Engine.attr("title", "Revealing before submitting marks this word as assisted")], rows.update_by(row.field(|cell| cell.word_key), |m, key| Update.step(m, |x| Workspace.reveal(x, key)))),
 			),
 		],
@@ -566,7 +566,7 @@ edition = |model|
 	}
 
 ## A translation to write: the learner's draft and a deliberate reveal of the reference.
-translation_field : State(ctx, Model.Model), Val(ctx, Model.Model), Tools.ModuleId -> Elem(ctx)
+translation_field : State(ctx, Model.Model), Signal(ctx, Model.Model), Tools.ModuleId -> Elem(ctx)
 translation_field = |state, model, module_id| {
 	literal = module_id == LiteralModule
 	key = if (literal) Study.literal_key else Study.prose_key
@@ -583,7 +583,7 @@ translation_field = |state, model, module_id| {
 			),
 			Engine.when(
 				model.map(|m| m.study.revealed.contains(key)),
-				|| Html.p_v(model.map(|m| reference(m, literal)), [Engine.class("reference-answer")]),
+				|| Html.p_s(model.map(|m| reference(m, literal)), [Engine.class("reference-answer")]),
 				|| Html.button("Reveal", [Engine.class("reveal-button"), Engine.attr("type", "button"), Engine.attr("title", "Revealing before submitting marks this answer as assisted")], state.update(|m| Update.step(m, |x| Workspace.reveal(x, key)))),
 			),
 		],
@@ -593,7 +593,7 @@ translation_field = |state, model, module_id| {
 ## The tools the learner chose, each with its progress on this passage.
 tool_tray : State(Page.S, Model.Model) -> Elem(Page.S)
 tool_tray = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"section",
 		[Engine.class("activity-area")],
@@ -607,8 +607,8 @@ tool_tray = |session| {
 						|tool| tool.key,
 						|row| Engine.element(
 							"button",
-							[Engine.class_v(row.field(|tool| if tool.active "activity-chip is-active" else "activity-chip")), Engine.attr("type", "button"), Engine.on_click(session.lift_row().update_by(row.field(|tool| tool.module_id), |m, module_id| Update.step(m, |x| if x.active_module == Some(module_id) Workspace.close_workbench(x) else Workspace.open_module(x, module_id))))],
-							[Engine.element("span", [Engine.class("chip-copy")], [Engine.element("strong", [], [Engine.text_v(row.field(|tool| tool.name))]), Html.span_v(row.field(|tool| tool.status), [])])],
+							[Engine.class_s(row.field(|tool| if tool.active "activity-chip is-active" else "activity-chip")), Engine.attr("type", "button"), Engine.on_click(session.lift_row().update_by(row.field(|tool| tool.module_id), |m, module_id| Update.step(m, |x| if x.active_module == Some(module_id) Workspace.close_workbench(x) else Workspace.open_module(x, module_id))))],
+							[Engine.element("span", [Engine.class("chip-copy")], [Engine.element("strong", [], [Engine.text_s(row.field(|tool| tool.name))]), Html.span_s(row.field(|tool| tool.status), [])])],
 						),
 					),
 				],
@@ -632,7 +632,7 @@ tool_status = |model, module_id| {
 
 tool_panel : State(Page.S, Model.Model) -> Elem(Page.S)
 tool_panel = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"aside",
 		[Engine.class("workbench")],
@@ -640,7 +640,7 @@ tool_panel = |session| {
 			Html.div(
 				"workbench-heading",
 				[
-					Engine.element("h2", [], [Engine.text_v(model.map(|m| active_tool(m, Tools.module_name)))]),
+					Engine.element("h2", [], [Engine.text_s(model.map(|m| active_tool(m, Tools.module_name)))]),
 					Html.button("×", [Engine.class("close-workbench"), Engine.attr("type", "button"), Html.aria_label("Close tool")], Page.act(session, Workspace.close_workbench)),
 				],
 			),
@@ -664,7 +664,7 @@ tool_panel = |session| {
 ## word, with self-marking; words not asked this time show faded.
 grading : State(Page.S, Model.Model) -> Elem(Page.S)
 grading = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"section",
 		[Engine.class("reading-stage grading-stage")],
@@ -690,12 +690,12 @@ grading = |session| {
 					Engine.each(
 						model.map(graded_translations),
 						|item| item.key,
-						|row| Html.div_v(
+						|row| Html.div_s(
 							row.field(|item| if item.was_missed "grading-card was-missed" else "grading-card"),
 							[
-								Engine.element("h3", [], [Engine.text_v(row.field(|item| item.greek))]),
-								Html.p_v(row.field(|item| item.reference), [Engine.class("interlinear-reference")]),
-								Html.p_v(row.field(|item| if item.guess.trim() == "" "No answer" else item.guess), [Engine.class_v(row.field(|item| if item.guess.trim() == "" "interlinear-guess is-empty" else "interlinear-guess"))]),
+								Engine.element("h3", [], [Engine.text_s(row.field(|item| item.greek))]),
+								Html.p_s(row.field(|item| item.reference), [Engine.class("interlinear-reference")]),
+								Html.p_s(row.field(|item| if item.guess.trim() == "" "No answer" else item.guess), [Engine.class_s(row.field(|item| if item.guess.trim() == "" "interlinear-guess is-empty" else "interlinear-guess"))]),
 								Html.div("grading-card-actions", [mark_buttons(session, row), item_notes(row)]),
 							],
 						),
@@ -764,12 +764,12 @@ graded_word_body : State(Page.S, Model.Model), RowRef(Page.S, WorkspaceView.Grad
 graded_word_body = |session, row|
 	Engine.when(
 		row.field(|word| word.asked),
-		|| Html.div_v(
+		|| Html.div_s(
 			row.field(|word| if word.was_missed "interlinear-word was-missed" else "interlinear-word"),
 			[
-				Html.span_v(row.field(|word| word.greek), [Engine.class("interlinear-greek"), Engine.attr("lang", "grc")]),
-				Html.span_v(row.field(|word| word.reference), [Engine.class("interlinear-reference")]),
-				Html.span_v(row.field(|word| if word.guess.trim() == "" "—" else word.guess), [Engine.class_v(row.field(|word| if word.guess.trim() == "" "interlinear-guess is-empty" else "interlinear-guess"))]),
+				Html.span_s(row.field(|word| word.greek), [Engine.class("interlinear-greek"), Engine.attr("lang", "grc")]),
+				Html.span_s(row.field(|word| word.reference), [Engine.class("interlinear-reference")]),
+				Html.span_s(row.field(|word| if word.guess.trim() == "" "—" else word.guess), [Engine.class_s(row.field(|word| if word.guess.trim() == "" "interlinear-guess is-empty" else "interlinear-guess"))]),
 				mark_buttons(session, row),
 				item_notes(row),
 			],
@@ -777,8 +777,8 @@ graded_word_body = |session, row|
 		|| Html.div(
 			"interlinear-word is-settled",
 			[
-				Html.span_v(row.field(|word| word.greek), [Engine.class("interlinear-greek"), Engine.attr("lang", "grc")]),
-				Html.span_v(row.field(|word| word.previous), [Engine.class("cell-previous")]),
+				Html.span_s(row.field(|word| word.greek), [Engine.class("interlinear-greek"), Engine.attr("lang", "grc")]),
+				Html.span_s(row.field(|word| word.previous), [Engine.class("cell-previous")]),
 				Html.button(
 					"✗ Missed it",
 					[Engine.class("missed-button"), Engine.attr("type", "button"), Engine.attr("title", "You weren't asked this word, but got it wrong: it will be asked next time")],
@@ -797,12 +797,12 @@ mark_buttons = |session, row| {
 		[
 			Html.button(
 				"✓",
-				[Engine.class_v(row.field(|word| if word.mark == "right" "mark-button is-right" else "mark-button")), Engine.attr("type", "button"), Html.aria_label("Mark right"), Engine.test_id_v(key.map(|k| "right-${k}"))],
+				[Engine.class_s(row.field(|word| if word.mark == "right" "mark-button is-right" else "mark-button")), Engine.attr("type", "button"), Html.aria_label("Mark right"), Engine.test_id_s(key.map(|k| "right-${k}"))],
 				rows.update_by(key, |m, k| Update.step(m, |x| Workspace.mark(x, k, Bool.True))),
 			),
 			Html.button(
 				"✗",
-				[Engine.class_v(row.field(|word| if word.mark == "wrong" "mark-button is-wrong" else "mark-button")), Engine.attr("type", "button"), Html.aria_label("Mark wrong"), Engine.test_id_v(key.map(|k| "wrong-${k}"))],
+				[Engine.class_s(row.field(|word| if word.mark == "wrong" "mark-button is-wrong" else "mark-button")), Engine.attr("type", "button"), Html.aria_label("Mark wrong"), Engine.test_id_s(key.map(|k| "wrong-${k}"))],
 				rows.update_by(key, |m, k| Update.step(m, |x| Workspace.mark(x, k, Bool.False))),
 			),
 		],
@@ -820,8 +820,8 @@ item_notes = |row|
 				row.field(|word| word.last_time != None),
 				|| Engine.element(
 					"span",
-					[Engine.class("item-note missed-note"), Engine.attr_v("title", row.field(|word| "Last time: ${Model.with_default(word.last_time, "")}"))],
-					[Engine.text_v(row.field(|word| last_note(Model.with_default(word.last_time, ""))))],
+					[Engine.class("item-note missed-note"), Engine.attr_s("title", row.field(|word| "Last time: ${Model.with_default(word.last_time, "")}"))],
+					[Engine.text_s(row.field(|word| last_note(Model.with_default(word.last_time, ""))))],
 				),
 				|| Engine.text(""),
 			),
@@ -836,16 +836,16 @@ rating_buttons = |session|
 
 rating_button : State(Page.S, Model.Model), Fsrs.Rating, Str -> Elem(Page.S)
 rating_button = |session, rating, label| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"button",
 		[
-			Engine.class_v(model.map(|m| if Review.suggest_rating(Workspace.items(m)) == rating "rating-button is-suggested" else "rating-button")),
+			Engine.class_s(model.map(|m| if Review.suggest_rating(Workspace.items(m)) == rating "rating-button is-suggested" else "rating-button")),
 			Engine.attr("type", "button"),
 			Html.aria_label(label),
 			Engine.on_click(Page.act(session, |m| Nav.rate(m, rating))),
 		],
-		[Page.strong(label), Html.span_v(model.map(|m| interval(m, rating)), [Engine.class("rating-interval"), Engine.test_id("interval-${label}")])],
+		[Page.strong(label), Html.span_s(model.map(|m| interval(m, rating)), [Engine.class("rating-interval"), Engine.test_id("interval-${label}")])],
 	)
 }
 
@@ -867,7 +867,7 @@ interval = |model, rating|
 
 footer : State(Page.S, Model.Model) -> Elem(Page.S)
 footer = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"footer",
 		[Engine.class("workspace-footer")],
@@ -893,7 +893,7 @@ footer = |session| {
 								Html.div(
 									"checkpoint-copy",
 									[
-										Engine.element("strong", [], [Engine.text_v(model.map(marked_count))]),
+										Engine.element("strong", [], [Engine.text_s(model.map(marked_count))]),
 										Engine.element("span", [], [Engine.text("How well did you know it? The suggestion follows your marks.")]),
 									],
 								),
@@ -920,15 +920,15 @@ footer = |session| {
 ## Nothing left in the work's queue today.
 queue_done : State(Page.S, Model.Model) -> Elem(Page.S)
 queue_done = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"section",
 		[Engine.class("reading-stage queue-done")],
 		[
-			Html.p_v(model.map(Model.work_title), [Engine.class("eyebrow")]),
+			Html.p_s(model.map(Model.work_title), [Engine.class("eyebrow")]),
 			Html.h2("Done for today", ""),
-			Html.p_v(model.map(done_summary), [Engine.test_id("done-summary")]),
-			Html.p_v(model.map(done_next), [Engine.class("muted"), Engine.test_id("done-next")]),
+			Html.p_s(model.map(done_summary), [Engine.test_id("done-summary")]),
+			Html.p_s(model.map(done_next), [Engine.class("muted"), Engine.test_id("done-next")]),
 			Html.div(
 				"button-row",
 				[
@@ -942,11 +942,11 @@ queue_done = |session| {
 	)
 }
 
-learn_more : State(Page.S, Model.Model), Val(Page.S, Bool) -> Elem(Page.S)
+learn_more : State(Page.S, Model.Model), Signal(Page.S, Bool) -> Elem(Page.S)
 learn_more = |session, primary|
-	Html.button_v(
-		session.val().map(|m| "Learn ${Model.learn_more_step(m).to_str()} more →"),
-		[Engine.class_v(primary.map(|p| if p "primary-button" else "secondary-button")), Engine.attr("type", "button")],
+	Html.button_s(
+		session.signal().map(|m| "Learn ${Model.learn_more_step(m).to_str()} more →"),
+		[Engine.class_s(primary.map(|p| if p "primary-button" else "secondary-button")), Engine.attr("type", "button")],
 		Page.act(session, Nav.learn_more),
 	)
 
@@ -980,14 +980,14 @@ done_next = |model| {
 ## After grading the last passage of a work outside a session.
 work_finished : State(Page.S, Model.Model) -> Elem(Page.S)
 work_finished = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"section",
 		[Engine.class("reading-stage queue-done")],
 		[
-			Html.p_v(model.map(Model.work_title), [Engine.class("eyebrow")]),
-			Engine.element("h2", [], [Engine.text_v(model.map(|m| "You've finished ${Model.work_title(m)}"))]),
-			Html.p_v(
+			Html.p_s(model.map(Model.work_title), [Engine.class("eyebrow")]),
+			Engine.element("h2", [], [Engine.text_s(model.map(|m| "You've finished ${Model.work_title(m)}"))]),
+			Html.p_s(
 				model.map(
 					|m| {
 						due = due_now(m)
@@ -1003,7 +1003,7 @@ work_finished = |session| {
 			Html.div(
 				"button-row",
 				[
-					Html.button_v(model.map(|m| if due_now(m) > 0 "Review now →" else "Study this work →"), [Engine.class("primary-button"), Engine.attr("type", "button")], Page.act(session, |m| Nav.start_today_in(m, Model.active_id(m)))),
+					Html.button_s(model.map(|m| if due_now(m) > 0 "Review now →" else "Study this work →"), [Engine.class("primary-button"), Engine.attr("type", "button")], Page.act(session, |m| Nav.start_today_in(m, Model.active_id(m)))),
 					Page.button("Your progress", "secondary-button", Page.act(session, |m| Nav.go_route(m, Stats))),
 					Page.button("Back to library", "secondary-button", Page.act(session, show_library)),
 				],
@@ -1040,7 +1040,7 @@ HistoryItem : { key : Str, class : Str, label : Str, lang : Str, reference : Str
 ## Every finished attempt at the passage, newest first.
 history : State(Page.S, Model.Model) -> Elem(Page.S)
 history = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"section",
 		[Engine.class("reading-stage history-stage")],
@@ -1048,7 +1048,7 @@ history = |session| {
 			Html.div(
 				"history-heading",
 				[
-					Html.div("", [Html.p_v(model.map(|m| "${Model.work_title(m)} ${Model.current_label(m)}"), [Engine.class("eyebrow")]), Html.h2("Past attempts", "")]),
+					Html.div("", [Html.p_s(model.map(|m| "${Model.work_title(m)} ${Model.current_label(m)}"), [Engine.class("eyebrow")]), Html.h2("Past attempts", "")]),
 					Page.button("← Back to current attempt", "secondary-button", Page.act(session, Workspace.close_history)),
 				],
 			),
@@ -1058,8 +1058,8 @@ history = |session| {
 				|| Html.div(
 					"history-trend",
 					[
-						Engine.element("p", [], [Engine.element("span", [Engine.class("muted")], [Engine.text("Right, oldest to newest: ")]), Engine.element("strong", [], [Engine.text_v(model.map(|m| trend(m, |t| t.right)))])]),
-						Engine.element("p", [], [Engine.element("span", [Engine.class("muted")], [Engine.text("Wrong, oldest to newest: ")]), Engine.element("strong", [], [Engine.text_v(model.map(|m| trend(m, |t| t.wrong)))])]),
+						Engine.element("p", [], [Engine.element("span", [Engine.class("muted")], [Engine.text("Right, oldest to newest: ")]), Engine.element("strong", [], [Engine.text_s(model.map(|m| trend(m, |t| t.right)))])]),
+						Engine.element("p", [], [Engine.element("span", [Engine.class("muted")], [Engine.text("Wrong, oldest to newest: ")]), Engine.element("strong", [], [Engine.text_s(model.map(|m| trend(m, |t| t.wrong)))])]),
 						Engine.when(
 							model.map(|m| !missed_every_time(m).is_empty()),
 							|| Engine.element("p", [], [Engine.element("span", [Engine.class("muted")], [Engine.text("Missed every time: ")]), chips(model.map(missed_every_time), Bool.False)]),
@@ -1171,28 +1171,28 @@ history_entry : State(Page.S, Model.Model), RowRef(Page.S, HistoryEntry) -> Elem
 history_entry = |session, row|
 	Engine.element(
 		"li",
-		[Engine.class_v(row.field(|entry| if entry.selected "history-entry is-selected" else "history-entry"))],
+		[Engine.class_s(row.field(|entry| if entry.selected "history-entry is-selected" else "history-entry"))],
 		[
 			Engine.element(
 				"button",
 				[
 					Engine.class("history-summary"),
 					Engine.attr("type", "button"),
-					Engine.attr_v("aria-expanded", row.field(|entry| if entry.selected "true" else "false")),
+					Engine.attr_s("aria-expanded", row.field(|entry| if entry.selected "true" else "false")),
 					Engine.on_click(session.lift_row().update_by(row.field(|entry| entry.finished_at), |m, at| Update.step(m, |x| Workspace.select_history_attempt(x, at)))),
 				],
 				[
-					Html.span_v(row.field(|entry| entry.date), [Engine.class("history-date")]),
+					Html.span_s(row.field(|entry| entry.date), [Engine.class("history-date")]),
 					Engine.element(
 						"span",
 						[Engine.class("history-counts")],
 						[
-							Html.span_v(row.field(|entry| entry.right), [Engine.class("count-right")]),
-							Html.span_v(row.field(|entry| entry.wrong), [Engine.class("count-wrong")]),
-							Engine.when(row.field(|entry| entry.unmarked != ""), || Html.span_v(row.field(|entry| entry.unmarked), [Engine.class("muted")]), || Engine.text("")),
+							Html.span_s(row.field(|entry| entry.right), [Engine.class("count-right")]),
+							Html.span_s(row.field(|entry| entry.wrong), [Engine.class("count-wrong")]),
+							Engine.when(row.field(|entry| entry.unmarked != ""), || Html.span_s(row.field(|entry| entry.unmarked), [Engine.class("muted")]), || Engine.text("")),
 						],
 					),
-					Html.span_v(row.field(|entry| entry.change), [Engine.class("history-change")]),
+					Html.span_s(row.field(|entry| entry.change), [Engine.class("history-change")]),
 				],
 			),
 			Html.div(
@@ -1224,17 +1224,17 @@ history_entry = |session, row|
 						Engine.each(
 							row.field(|entry| entry.items),
 							|item| item.key,
-							|item| Html.div_v(
+							|item| Html.div_s(
 								item.field(|found| found.class),
 								[
-									Html.span_v(item.field(|found| found.label), [Engine.class("history-item-label"), Engine.attr_v("lang", item.field(|found| found.lang))]),
-									Html.span_v(item.field(|found| found.reference), [Engine.class("interlinear-reference")]),
-									Html.span_v(item.field(|found| found.guess), [Engine.class_v(item.field(|found| found.guess_class))]),
+									Html.span_s(item.field(|found| found.label), [Engine.class("history-item-label"), Engine.attr_s("lang", item.field(|found| found.lang))]),
+									Html.span_s(item.field(|found| found.reference), [Engine.class("interlinear-reference")]),
+									Html.span_s(item.field(|found| found.guess), [Engine.class_s(item.field(|found| found.guess_class))]),
 									Engine.element(
 										"span",
 										[Engine.class("history-mark")],
 										[
-											Engine.text_v(item.field(|found| found.mark)),
+											Engine.text_s(item.field(|found| found.mark)),
 											Engine.when(item.field(|found| found.revealed), || Engine.element("span", [Engine.class("item-note")], [Engine.text("revealed")]), || Engine.text("")),
 										],
 									),
@@ -1248,12 +1248,12 @@ history_entry = |session, row|
 		],
 	)
 
-chips : Val(ctx, List(Chip)), Bool -> Elem(ctx)
+chips : Signal(ctx, List(Chip)), Bool -> Elem(ctx)
 chips = |found, recovered|
 	Engine.element(
 		"span",
 		[Engine.class(if (recovered) "history-chips is-recovered" else "history-chips")],
-		[Engine.each(found, |item| item.key, |row| Html.span_v(row.field(|item| item.label), [Engine.class("history-chip"), Engine.attr_v("lang", row.field(|item| item.lang))]))],
+		[Engine.each(found, |item| item.key, |row| Html.span_s(row.field(|item| item.label), [Engine.class("history-chip"), Engine.attr_s("lang", row.field(|item| item.lang))]))],
 	)
 
 active_tool : Model.Model, (Tools.ModuleId -> Str) -> Str
@@ -1292,7 +1292,7 @@ citation_field = |model, pick|
 		None => ""
 	}
 
-citation_text : Val(Page.S, Model.Model), (Corpus.Citation -> Str) -> Val(Page.S, Str)
+citation_text : Signal(Page.S, Model.Model), (Corpus.Citation -> Str) -> Signal(Page.S, Str)
 citation_text = |model, pick| model.map(|m| citation_field(m, pick))
 
 cell_for : Model.Model, [Some(Set(Str)), None], Corpus.Token, Str, Bool -> WorkspaceView.Cell

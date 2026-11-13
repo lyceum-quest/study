@@ -1,4 +1,4 @@
-import pf.Engine exposing [Elem, Row, RowRef, State, Val]
+import pf.Engine exposing [Elem, Row, RowRef, State, Signal]
 import pf.Html
 import fsrs.FsrsMath
 import study.Corpus
@@ -42,7 +42,7 @@ LibraryView := [].{
 
 	view : State(Page.S, Model.Model) -> Elem(Page.S)
 	view = |session| {
-		model = session.val()
+		model = session.signal()
 		Engine.element(
 			"main",
 			[Engine.class("page library-page")],
@@ -99,7 +99,7 @@ LibraryView := [].{
 	## "Today", and which works to study: all, or one at a time.
 	today_head : State(Page.S, Model.Model) -> Elem(Page.S)
 	today_head = |session| {
-		model = session.val()
+		model = session.signal()
 		Html.div(
 			"today-head",
 			[
@@ -115,7 +115,7 @@ LibraryView := [].{
 							[],
 							[
 								Html.option(all_works, "All works"),
-								Engine.each(model.map(|m| working_on(m).map(|work| { id: work.id, title: work.title })), |work| work.id, |row| Engine.element("option", [Engine.attr_v("value", row.key())], [Engine.text_v(row.field(|work| work.title))])),
+								Engine.each(model.map(|m| working_on(m).map(|work| { id: work.id, title: work.title })), |work| work.id, |row| Engine.element("option", [Engine.attr_s("value", row.key())], [Engine.text_s(row.field(|work| work.title))])),
 							],
 							Page.act_value(session, |m, work| Nav.set_today_scope(m, if work == all_works "" else work)),
 						),
@@ -128,14 +128,14 @@ LibraryView := [].{
 	## What comes back later today in this mode, with a way to take it now.
 	upcoming : State(Page.S, Model.Model), Today.Mode -> Elem(Page.S)
 	upcoming = |session, mode| {
-		model = session.val()
+		model = session.signal()
 		Engine.when(
 			model.map(|m| next_due(m, mode) != None),
 			|| Engine.element(
 				"p",
 				[Engine.class("today-summary")],
 				[
-					Engine.text_v(
+					Engine.text_s(
 						model.map(
 							|m| match next_due(m, mode) {
 								Some((item, due)) => "Next: ${Model.item_name(m, item)} comes back in ${Review.interval_label(m.clock, due)}. "
@@ -163,8 +163,8 @@ LibraryView := [].{
 	## Continues the session with more new passages than today's limit.
 	learn_more_button : State(Page.S, Model.Model), Bool -> Elem(Page.S)
 	learn_more_button = |session, primary|
-		Html.button_v(
-			session.val().map(|m| "Learn ${Model.learn_more_step(m).to_str()} more →"),
+		Html.button_s(
+			session.signal().map(|m| "Learn ${Model.learn_more_step(m).to_str()} more →"),
 			[Engine.class(if (primary) "primary-button" else "secondary-button"), Engine.attr("type", "button")],
 			Page.act(session, Nav.learn_more),
 		)
@@ -173,13 +173,13 @@ LibraryView := [].{
 ## Today's session across every work: what is waiting, and how to start it.
 today_panel : State(Page.S, Model.Model) -> Elem(Page.S)
 today_panel = |session| {
-	model = session.val()
+	model = session.signal()
 	Engine.element(
 		"section",
 		[Engine.class("today-panel"), Html.aria_label("Today")],
 		[
 			LibraryView.today_head(session),
-			Engine.element("h1", [Engine.class("today-title")], [Engine.text_v(model.map(today_title))]),
+			Engine.element("h1", [Engine.class("today-title")], [Engine.text_s(model.map(today_title))]),
 			Engine.switch(
 				model.map(|m| if today_parts(m).is_empty() "caught-up" else "waiting"),
 				["caught-up", "waiting"],
@@ -200,17 +200,17 @@ today_panel = |session| {
 						Html.div_attrs(
 							[],
 							[
-								Html.p_v(model.map(|m| "About ${Model.counted(minutes(m), "minute", "minutes")}. Reviews come first, then new passages."), [Engine.class("today-summary")]),
+								Html.p_s(model.map(|m| "About ${Model.counted(minutes(m), "minute", "minutes")}. Reviews come first, then new passages."), [Engine.class("today-summary")]),
 								Html.div(
 									"today-actions",
 									[
 										Page.button("Start →", "primary-button", Page.act(session, |m| Nav.start_today(m, Everything))),
-										Html.button_v(
+										Html.button_s(
 											model.map(|m| "Words only · ${Model.today_plan(m).words.len().to_str()}"),
 											[Engine.class("secondary-button"), Engine.attr("type", "button"), Html.disabled(model.map(|m| Model.today_plan(m).words.is_empty()))],
 											Page.act(session, |m| Nav.start_today(m, WordsOnly)),
 										),
-										Html.button_v(
+										Html.button_s(
 											model.map(|m| "Passages only · ${passage_count(m).to_str()}"),
 											[Engine.class("secondary-button"), Engine.attr("type", "button"), Html.disabled(model.map(|m| passage_count(m) == 0))],
 											Page.act(session, |m| Nav.start_today(m, PassagesOnly)),
@@ -230,8 +230,8 @@ today_panel = |session| {
 						Engine.text("Continue where you left off: "),
 						Engine.element(
 							"a",
-							[Engine.attr_v("href", model.map(|m| match continue_at(m) { Some((work, ref)) => Route.to_path(Study(work.id, ref)) None => "#/" }))],
-							[Engine.text_v(model.map(|m| match continue_at(m) { Some((work, ref)) => "${Model.passage_name(m, work.id, ref)} →" None => "" }))],
+							[Engine.attr_s("href", model.map(|m| match continue_at(m) { Some((work, ref)) => Route.to_path(Study(work.id, ref)) None => "#/" }))],
+							[Engine.text_s(model.map(|m| match continue_at(m) { Some((work, ref)) => "${Model.passage_name(m, work.id, ref)} →" None => "" }))],
 						),
 					],
 				),
@@ -353,7 +353,7 @@ work_row = |model, work, index| {
 ## credits on request. Test ids start with `section`: `<section>-<position>`
 ## for a row's title, `<section>:<work>` for its progress line, and `:read`
 ## and `:study` after that for its buttons.
-work_rows : State(Page.S, Model.Model), Str, Val(Page.S, List(LibraryView.WorkRow)) -> Elem(Page.S)
+work_rows : State(Page.S, Model.Model), Str, Signal(Page.S, List(LibraryView.WorkRow)) -> Elem(Page.S)
 work_rows = |session, section, found|
 	Html.div(
 		"work-rows",
@@ -371,14 +371,14 @@ work_rows = |session, section, found|
 							Html.div(
 								"work-row-main",
 								[
-									Engine.element("h3", [Engine.class("work-row-title"), Engine.test_id_v(row.field(|work| "${section}-${work.position}"))], [Engine.text_v(row.field(|work| work.title))]),
-									Html.p_v(row.field(|work| work.meta), [Engine.class("work-row-meta"), Engine.test_id_v(id.map(|work| "${section}:${work}"))]),
+									Engine.element("h3", [Engine.class("work-row-title"), Engine.test_id_s(row.field(|work| "${section}-${work.position}"))], [Engine.text_s(row.field(|work| work.title))]),
+									Html.p_s(row.field(|work| work.meta), [Engine.class("work-row-meta"), Engine.test_id_s(id.map(|work| "${section}:${work}"))]),
 									Engine.element(
 										"details",
 										[Engine.class("work-row-sources")],
 										[
 											Engine.element("summary", [], [Engine.text("Edition & sources")]),
-											Html.p_v(row.field(|work| work.edition), [Engine.class("greek-subtitle")]),
+											Html.p_s(row.field(|work| work.edition), [Engine.class("greek-subtitle")]),
 											Engine.when(row.field(|work| work.has_sources), || sources(row), || Engine.text("")),
 										],
 									),
@@ -389,12 +389,12 @@ work_rows = |session, section, found|
 								[
 									Html.button(
 										"Read",
-										[Engine.class("secondary-button"), Engine.attr("type", "button"), Html.disabled(loading), Engine.test_id_v(id.map(|work| "${section}:${work}:read"))],
+										[Engine.class("secondary-button"), Engine.attr("type", "button"), Html.disabled(loading), Engine.test_id_s(id.map(|work| "${section}:${work}:read"))],
 										rows_session.update_by(id, |m, work| Update.step(m, |x| Nav.go_route(x, Reader(work, None)))),
 									),
-									Html.button_v(
+									Html.button_s(
 										row.field(|work| if work.loading "Loading…" else work.action),
-										[Engine.class("primary-button"), Engine.attr("type", "button"), Html.disabled(loading), Engine.test_id_v(id.map(|work| "${section}:${work}:study"))],
+										[Engine.class("primary-button"), Engine.attr("type", "button"), Html.disabled(loading), Engine.test_id_s(id.map(|work| "${section}:${work}:study"))],
 										rows_session.update_by(id, |m, work| Update.step(m, |x| Nav.start_today_in(x, work))),
 									),
 								],
@@ -417,9 +417,9 @@ sources = |row|
 			Page.external(row.field(|work| work.reader_url), row.field(|work| work.source_edition), row.field(|work| work.source_title)),
 			Engine.text(" ("),
 			Page.external(row.field(|work| work.source_url), row.field(|work| work.snapshot), Engine.const("TEI XML")),
-			Engine.text_v(row.field(|work| work.after_source)),
+			Engine.text_s(row.field(|work| work.after_source)),
 			Page.external(row.field(|work| work.annotations_url), Engine.const("Tokenization, lemmas, morphology, and syntax"), row.field(|work| work.annotations)),
-			Engine.text_v(row.field(|work| work.after_annotations)),
+			Engine.text_s(row.field(|work| work.after_annotations)),
 		],
 	)
 
@@ -427,7 +427,7 @@ next_due : Model.Model, Today.Mode -> [Some((Today.Item, I64)), None]
 next_due = |model, mode| Today.upcoming(model.clock, mode, model.today_scope, model.entries, model.word_cards)
 
 ## The "All works" choice of the Today scope (the Elm app's empty value).
-## Workaround: roc-signals 0.3.0 removes an attribute set to "", so an
+## Workaround: roc-signals 0.5.0 removes an attribute set to "", so an
 ## option cannot have the value "" (it would fall back to its label); see
 ## https://github.com/lukewilliamboswell/roc-signals/issues/205 (open; roc-issues
 ## archive/RS-006-empty-attribute-values).

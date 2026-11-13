@@ -1,4 +1,4 @@
-import pf.Engine exposing [Elem, Handler, In, Root, State, Val]
+import pf.Engine exposing [Elem, Handler, In, Root, State, Signal]
 import pf.Html
 import Model
 import Update
@@ -26,7 +26,7 @@ Page := [].{
 	strong = |text| Engine.element("strong", [], [Engine.text(text)])
 
 	## A link to another site, in a new tab so the session stays open.
-	external : Val(ctx, Str), Val(ctx, Str), Val(ctx, Str) -> Elem(ctx)
+	external : Signal(ctx, Str), Signal(ctx, Str), Signal(ctx, Str) -> Elem(ctx)
 	external = |url, description, label|
-		Engine.element("a", [Engine.attr_v("href", url), Engine.attr("target", "_blank"), Engine.attr("rel", "noopener"), Engine.attr_v("title", description)], [Engine.text_v(label)])
+		Engine.element("a", [Engine.attr_s("href", url), Engine.attr("target", "_blank"), Engine.attr("rel", "noopener"), Engine.attr_s("title", description)], [Engine.text_s(label)])
 }
