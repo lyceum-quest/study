@@ -1,6 +1,7 @@
 app [main!] { pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.22.2/9zUBxb1LtXYVc4eR4hAtd1WQDwBYDhM6HQdZz1UFCm2m.tar.zst" }
 
 import pf.Cmd
+import pf.OsStr
 import pf.Path
 import pf.Stderr
 import pf.Stdout
@@ -55,7 +56,7 @@ runtime_matches_pin! = |{}|
 	if Path.exists!(Path.utf8(runtime_path))? {
 		lock : { release : Str, url : Str, sha256 : Str }
 		lock = Json.parse(Path.read_utf8!("signals/runtime.lock.json")?)?
-		sum = Cmd.new("sha256sum").args(["--", "dist/signals/runtime.mjs"]).exec_output!()?
+		sum = Cmd.new("sha256sum").args(["--", OsStr.from_str(runtime_path)]).exec_output!()?
 		Ok(List.first(Str.split_on(sum.stdout_utf8, " ")) == Ok(lock.sha256))
 	} else {
 		Ok(Bool.True)
