@@ -22,7 +22,8 @@ import Workspace
 ## Workaround: roc-signals 0.3.0 cannot measure layout, so the word popup
 ## opens in its natural place below the word (the Elm app measures it and
 ## moves it above or sideways to fit); see
-## https://github.com/thebrandonlucas/roc-issues/tree/master/roc-signals/RS-005-layout-measurement.
+## https://github.com/lukewilliamboswell/roc-signals/issues/204, closed in
+## favour of #211, #213 and #214 (roc-issues archive/RS-005-layout-measurement).
 WorkspaceView := [].{
 
 	## One word of the passage to answer. `greek` carries the punctuation that

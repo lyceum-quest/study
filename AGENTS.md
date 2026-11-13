@@ -11,13 +11,13 @@
   1. Check whether it has been fixed upstream.
   2. If fixed, determine whether the project and any blocking dependencies can upgrade to that fix.
   3. If no viable upgrade exists, propose a workaround. Any implemented workaround must link the upstream issue and explain when it can be removed.
-- Record every Roc issue found (compiler bug, platform defect, or missing capability) in the sister repository `../roc-issues`, following the "Adding a repro" format in its `README.md`: bugs get a self-contained `bugs/BUG-XXX-*` directory with a pinned `flake.nix`/`flake.lock`, `README.md`, and `repro.sh`; missing capabilities go under its Improvements section. If `../roc-issues` is absent, clone `https://github.com/thebrandonlucas/roc-issues` there first.
+- Record every Roc issue found (compiler bug, platform defect, or missing capability) in the sister repository `../roc-issues`, following the "Adding a repro" format in its `README.md`. Put each draft in the folder of the project whose tracker it goes to (`roc/`, `basic-cli/`, `basic-webserver/` or `roc-signals/`; see "Where a draft goes" in its `AGENTS.md`): bugs get a self-contained `BUG-XXX-*` directory with a pinned `flake.nix`/`flake.lock`, `README.md`, and `repro.sh`; missing capabilities get an `IMPROVEMENT-XXX-*` (for roc-signals, `RS-XXX-*`) directory. Filed, fixed and dropped drafts move to its `archive/`. If `../roc-issues` is absent, clone `https://github.com/thebrandonlucas/roc-issues` there first.
 
 ## Language boundary
 
 - Maintained project code must be Kai or Roc.
 - Lyceum Study is a Roc app on the [roc-signals](https://github.com/lukewilliamboswell/roc-signals) platform (`signals/`, ported from an Elm app that git history keeps). Put pure Roc logic in packages under `packages/`.
-- Keep browser JavaScript in `browser-bridge.js` and the roc-signals runtime only. Use the runtime as released and never edit it. `browser-bridge.js` may mount the app, hand the runtime a `fetch` that adds credentials (so the account API on another origin gets its session cookie; roc-issues RS-008), and translate narrow storage messages from the app's `<lyceum-store>` element into IndexedDB operations, but it must not contain corpus parsing, validation, any other fetching, application state, business logic, or tooling. `kai run check-browser-boundary` enforces this.
+- Keep browser JavaScript in `browser-bridge.js` and the roc-signals runtime only. Use the runtime as released and never edit it. `browser-bridge.js` may mount the app, hand the runtime a `fetch` that adds credentials (so the account API on another origin gets its session cookie; lukewilliamboswell/roc-signals#206, closed in favour of #218), and translate narrow storage messages from the app's `<lyceum-store>` element into IndexedDB operations, but it must not contain corpus parsing, validation, any other fetching, application state, business logic, or tooling. `kai run check-browser-boundary` enforces this.
 - Do not maintain Python or shell source.
 - Implement project tooling and scripts in Roc.
 - Declare tooling dependencies and runnable tasks in `Kaifile.roc`.

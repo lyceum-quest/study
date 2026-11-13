@@ -21,8 +21,9 @@ import Store
 ## them with `send`, and Update joins them into one batch. Results carry the
 ## only wall clock the app has (`clock`) and the browser's UTC offset.
 ## Workaround: roc-signals 0.3.0 gives apps no clock or time zone
-## (https://github.com/thebrandonlucas/roc-issues/tree/master/roc-signals/RS-001-wall-clock-time);
-## take both from the platform once it does.
+## (https://github.com/lukewilliamboswell/roc-signals/issues/200, closed in
+## favour of #216, which adds the time at boot and when a timer fires; roc-issues
+## archive/RS-001-wall-clock-time); take both from the platform once it does.
 Model := [].{
 
 	Screen : [LibraryScreen, WorkspaceScreen, SettingsScreen, ReaderScreen, TodayScreen, WordScreen(Str), WordReviewScreen(Str), StatsScreen, WhatsNewScreen]

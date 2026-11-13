@@ -13,7 +13,8 @@ import Store
 ## HTTP calls are issued by View's effect sites when a call's serial changes.
 ## They need the account's session cookie on another origin, which the
 ## roc-signals runtime does not send by itself; browser-bridge.js gives the
-## runtime a fetch that includes credentials (see roc-issues RS-008).
+## runtime a fetch that includes credentials (see roc-signals#206, closed in
+## favour of #218, which adds a credentials field to requests).
 Syncing := [].{
 
 	## The release's account API (`config.json`), asked for once the library

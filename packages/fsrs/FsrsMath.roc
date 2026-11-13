@@ -525,9 +525,9 @@ ieee754_pow = |x, y| {
 		t = from_words($n.bitwise_and((0x000fffff).shr_wrap($k.to_u8_wrap()).bitwise_not()), 0)
 		$n = $n.bitwise_and(0x000fffff).bitwise_or(0x00100000).shr_wrap((20 - $k).to_u8_wrap())
 		if j < 0 {
-			# Not `-$n`, which Roc fails to parse:
-			# https://github.com/thebrandonlucas/roc-issues/tree/master/roc/BUG-027-unary-minus-before-var-parse-error
-			# (not yet reported upstream). Write `-$n` once that parses.
+			# Not `-$n`, which Roc fails to parse: https://github.com/roc-lang/roc/issues/12993
+			# (roc-issues archive/BUG-027-unary-minus-before-var-parse-error). Write `-$n` once
+			# that parses.
 			$n = $n.negate()
 		}
 		$p_h = $p_h - t

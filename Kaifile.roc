@@ -72,7 +72,8 @@ kaifile = Std.kaifile([
 	Task("build-signals", [Use("signals"), Run(["roc", "scripts/signals.roc", "build"])]),
 
 	# Runs the app's specs (signals/specs/*.scm) with its native spec runner. Their Chrome replay needs a
-	# checkout of roc-signals at the release tag (roc-issues roc-signals/RS-003-browser-spec-runner-in-release).
+	# checkout of roc-signals at the release tag (lukewilliamboswell/roc-signals#202; roc-issues
+	# archive/RS-003-browser-spec-runner-in-release).
 	Task("test-signals", [Use("signals"), Run(["roc", "scripts/signals.roc", "specs"])]),
 
 	Workflow(

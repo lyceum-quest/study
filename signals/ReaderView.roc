@@ -12,10 +12,11 @@ import WorkspaceView
 ## with a word's gloss on tap.
 ##
 ## Workaround: roc-signals 0.3.0 cannot measure layout or scroll
-## (https://github.com/thebrandonlucas/roc-issues/tree/master/roc-signals/RS-005-layout-measurement),
+## (https://github.com/lukewilliamboswell/roc-signals/issues/204, closed in
+## favour of #211, #213 and #214; roc-issues archive/RS-005-layout-measurement),
 ## so where the Elm app scrolls the current passage to the top of the reader,
 ## this one focuses it, which scrolls it into view. Scroll it like the Elm app
-## once the platform can.
+## once the app is on a release that has those.
 ReaderView := [].{
 
 	## `toggle_theme` and `theme_action` are the header's theme switch, which the reader's bar repeats.

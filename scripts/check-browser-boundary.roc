@@ -76,7 +76,8 @@ existing_files! = |paths|
 
 ## The one fetch the bridge may contain: the fetch it gives the roc-signals
 ## runtime, which only adds credentials for the account API (the runtime cannot
-## ask for them; roc-issues RS-008). It makes no request of its own.
+## ask for them; roc-signals#206, closed in favour of #218). It makes no request
+## of its own.
 credentials_fetch = "const withCredentials = (url, init) => fetch(url, Object.assign({}, init, { credentials: \"include\" }));"
 
 forbidden_bridge_terms = [

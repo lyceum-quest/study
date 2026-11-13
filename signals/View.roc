@@ -36,7 +36,10 @@ View := [].{
 		# the app, not the document, so the shell takes focus (and keeps it on
 		# clicks inside it) to receive the workspace's shortcuts; text fields
 		# stop their own keys. See
-		# https://github.com/thebrandonlucas/roc-issues/tree/master/roc-signals/RS-004-document-key-events.
+		# https://github.com/lukewilliamboswell/roc-signals/issues/203 (roc-issues
+		# archive/RS-004-document-key-events), closed in favour of roc-signals#212,
+		# which delivers keys at the document; drop this once the app is on a
+		# release that has it.
 		Engine.element(
 			"div",
 			[

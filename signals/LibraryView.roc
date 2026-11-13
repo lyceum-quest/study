@@ -429,7 +429,8 @@ next_due = |model, mode| Today.upcoming(model.clock, mode, model.today_scope, mo
 ## The "All works" choice of the Today scope (the Elm app's empty value).
 ## Workaround: roc-signals 0.3.0 removes an attribute set to "", so an
 ## option cannot have the value "" (it would fall back to its label); see
-## https://github.com/thebrandonlucas/roc-issues/tree/master/roc-signals/RS-006-empty-attribute-values.
+## https://github.com/lukewilliamboswell/roc-signals/issues/205 (open; roc-issues
+## archive/RS-006-empty-attribute-values).
 ## A work id is never "*".
 all_works : Str
 all_works = "*"

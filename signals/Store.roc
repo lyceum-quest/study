@@ -20,8 +20,9 @@ import json.JsonValue
 ##
 ## Workaround: roc-signals 0.3.0 has only local storage, so IndexedDB is reached
 ## through this custom element
-## (https://github.com/thebrandonlucas/roc-issues/tree/master/roc-signals/RS-002-asynchronous-storage);
-## replace it with platform requests if roc-signals gains them.
+## (https://github.com/lukewilliamboswell/roc-signals/issues/201; roc-issues
+## archive/RS-002-asynchronous-storage). roc-signals 0.4.0 added typed ports
+## (`Port.call`), which can replace it once the app is on 0.4.0 or later.
 Store := [].{
 
 	Response : { id : Str, ok : Bool, value : JsonValue, now : I64, offset : I64 }
