@@ -37,5 +37,9 @@
     (select-option (label "Coverage goal") "98")
     (expect-text (test-id "goal-needed") "Learn its 1 most frequent word you don't know yet to reach 98%.")
     (expect-attr (test-id "store") "data-request" "[{\"id\":\"save:12\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"reading-goals\",\"value\":{\"coverage\":98,\"perDay\":20,\"targets\":{\"demo\":\"2025-12-31\"}}}}]")
+
+    ; The Today panel keeps the dated goal in view.
+    (click (role button :name "Home"))
+    (expect-text (test-id "today-goal-demo") "Goal: Demo Work, 98% by 31 Dec 2025: about 1 new word a day, 1 to go.")
   )
 )

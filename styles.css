@@ -4894,3 +4894,9 @@ a.secondary-button {
   color: var(--muted);
   font-size: 0.92rem;
 }
+
+.today-goal {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
