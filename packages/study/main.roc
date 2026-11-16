@@ -10,6 +10,7 @@ package
 		Corpus,
 		Library,
 		Morphology,
+		Reading,
 		Review,
 		Route,
 		Stats,

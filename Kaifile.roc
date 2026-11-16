@@ -52,6 +52,9 @@ kaifile = Std.kaifile([
 	# Checks word cards, word review records and today's plan (packages/study/Words.roc and Today.roc).
 	Task("test-words-today", [Use("signals"), Run(["roc", "devtools/test-words-today.roc"])]),
 
+	# Checks reading goals: names, coverage, known words and pace (packages/study/Reading.roc).
+	Task("test-reading", [Use("signals"), Run(["roc", "devtools/test-reading.roc"])]),
+
 	# Checks the CHANGELOG.md parser for the What's new page (packages/study/Changelog.roc).
 	Task("test-changelog", [Use("signals"), Run(["roc", "devtools/test-changelog.roc"])]),
 
