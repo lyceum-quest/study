@@ -1,3 +1,4 @@
+import study.Reading
 import study.Study
 import study.Sync
 import Model
@@ -37,6 +38,8 @@ Settings := [].{
 				word_cards: Dict.empty(),
 				study: Study.empty_draft,
 				positions: Dict.empty(),
+				reading_goals: Reading.default_goals,
+				known_marks: Dict.empty(),
 				confirm_clear: Bool.False,
 				notice: if Model.syncs_progress(model) "Saved study data cleared from this device. Your synced progress comes back from your Lyceum account." else "Saved study data cleared from this device.",
 				sync: Sync.empty_state(0),

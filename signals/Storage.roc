@@ -1,4 +1,5 @@
 import json.JsonValue
+import study.Reading
 import study.Review
 import study.Study
 import study.Sync
@@ -34,6 +35,8 @@ Storage := [].{
 						"positions" => positions(timed, value)
 						"settings" => settings(timed, value)
 						"scope" => scope(timed, value)
+						"reading-goals" => { ..timed, reading_goals: Reading.decode_goals(setting_value(value)) }
+						"known-words" => { ..timed, known_marks: Reading.decode_marks(setting_value(value)) }
 						"sync-state" => sync_state(timed, value)
 						"cached-corpus" => Nav.receive_cached(timed, value)
 						"rating" => Nav.finish_rating(timed)
@@ -60,6 +63,8 @@ Storage := [].{
 			"reader-layers" => reader_layers(model, record)
 			"review-settings" => settings(model, record)
 			"today-scope" => scope(model, record)
+			"reading-goals" => { ..model, reading_goals: Reading.decode_goals(value) }
+			"known-words" => { ..model, known_marks: Reading.decode_marks(value) }
 			_ => model
 		}
 	}
@@ -195,3 +200,7 @@ sync_state = |model, value| {
 	}
 	{ ..model, sync: state, sync_loaded: Bool.True, sync_due_at: 1 }
 }
+
+## The value of `{"key": …, "value": …}`, or null when nothing is stored.
+setting_value : JsonValue -> JsonValue
+setting_value = |record| JsonValue.field(record, "value") ?? JsonValue.null

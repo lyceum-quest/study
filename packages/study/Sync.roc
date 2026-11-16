@@ -1,6 +1,7 @@
 import fsrs.FsrsMath
 import json.JsonValue
 import Account
+import Reading
 import Review
 import Study
 import Words
@@ -12,8 +13,9 @@ import Words
 ##
 ## History records (attempts and word reviews) never change, so devices exchange
 ## them and keep the union; cards are replayed from the merged history. Settings
-## (theme, reader layers, positions, review settings, today's scope) can change:
-## the newest edit wins. Drafts in progress stay on their device.
+## (theme, reader layers, positions, review settings, today's scope, reading
+## goals, words marked known) can change: the newest edit wins. Drafts in
+## progress stay on their device.
 ##
 ## The state remembers which account it belongs to, the server cursor, whether
 ## the first exchange is done, the history records the server already has, and
@@ -66,6 +68,8 @@ Sync := [].{
 		positions : Dict(Str, I64),
 		new_per_day : I64,
 		today_scope : [Some(Str), None],
+		reading_goals : Reading.Goals,
+		known_marks : Dict(Str, I64),
 	}
 
 	## A put into an IndexedDB store, as `storagePut id store value` in the Elm app.
@@ -249,6 +253,8 @@ Sync := [].{
 				},
 			),
 		),
+		("reading-goals", Reading.encode_goals(model.reading_goals)),
+		("known-words", Reading.encode_marks(model.known_marks)),
 	]
 
 	## Records the server doesn't have yet: history it hasn't acknowledged, and

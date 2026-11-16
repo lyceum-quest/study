@@ -1,4 +1,5 @@
 import fsrs.FsrsMath
+import json.JsonValue
 import Study
 import Words
 
@@ -36,6 +37,72 @@ Reading := [].{
 
 	## Where a work stands for a learner.
 	Standing : { tokens : U64, known_tokens : U64, unknown : U64, needed : U64 }
+
+	## The learner's reading goals, synced as the `reading-goals` setting: the
+	## coverage to aim for, the words a day to plan with (0: their own pace),
+	## and target dates (`2027-03-01`) by work.
+	Goals : { coverage : U64, per_day : U64, dates : Dict(Str, Str) }
+
+	default_goals : Goals
+	default_goals = { coverage: default_goal, per_day: 0, dates: Dict.empty() }
+
+	## `{"coverage": 95, "perDay": 0, "targets": {"luke": "2027-03-01"}}`.
+	encode_goals : Goals -> JsonValue
+	encode_goals = |goals|
+		JsonValue.object(
+			[
+				("coverage", JsonValue.int(goals.coverage.to_i64_wrap())),
+				("perDay", JsonValue.int(goals.per_day.to_i64_wrap())),
+				("targets", JsonValue.object(goals.dates.to_list().map(|(work, date)| (work, JsonValue.str(date))))),
+			],
+		)
+
+	## Missing or malformed parts keep their defaults.
+	decode_goals : JsonValue -> Goals
+	decode_goals = |json| {
+		number = |name, fallback|
+			match JsonValue.field(json, name) {
+				Ok(found) => match JsonValue.as_i64(found) {
+					Ok(n) if n >= 0 => n.to_u64_wrap()
+					_ => fallback
+				}
+				Err(_) => fallback
+			}
+		coverage = number("coverage", default_goal)
+		dates = match JsonValue.field(json, "targets") {
+			Ok(found) => JsonValue.fields(found).keep_oks(|(work, date)| JsonValue.as_str(date).map_ok(|text| (work, text))).fold(Dict.empty(), |acc, (work, date)| acc.insert(work, date))
+			Err(_) => Dict.empty()
+		}
+		{ coverage: if coverage >= 50 and coverage <= 100 coverage else default_goal, per_day: number("perDay", 0), dates }
+	}
+
+	## The lemmas marked known, with when: `{"λόγος": 1767225600000}`, synced
+	## as the `known-words` setting.
+	encode_marks : Dict(Str, I64) -> JsonValue
+	encode_marks = |marks| JsonValue.object(marks.to_list().map(|(lemma, at)| (lemma, JsonValue.int(at))))
+
+	decode_marks : JsonValue -> Dict(Str, I64)
+	decode_marks = |json| JsonValue.fields(json).keep_oks(|(lemma, at)| JsonValue.as_i64(at).map_ok(|n| (lemma, n))).fold(Dict.empty(), |acc, (lemma, at)| acc.insert(lemma, at))
+
+	## The day number (days since 1970-01-01) of an ISO date, `2027-03-01`.
+	day_of_date : Str -> Try(I64, [BadDate])
+	day_of_date = |text| {
+		parts = text.split_on("-")
+		match parts {
+			[y, m, d] => match (I64.from_str(y), I64.from_str(m), I64.from_str(d)) {
+				(Ok(year), Ok(month), Ok(day)) if month >= 1 and month <= 12 and day >= 1 and day <= 31 => Ok(days_from_civil(year, month, day))
+				_ => Err(BadDate)
+			}
+			_ => Err(BadDate)
+		}
+	}
+
+	## The ISO date of a day number.
+	date_of_day : I64 -> Str
+	date_of_day = |days| {
+		date = civil(days)
+		"${date.year.to_str()}-${two_digits(date.month)}-${two_digits(date.day)}"
+	}
 
 	## A coverage goal in percent.
 	default_goal : U64
@@ -300,3 +367,37 @@ is_lower = |p|
 is_greek_mark : U32 -> Bool
 is_greek_mark = |p|
 	p == 0x1FBD or (p >= 0x1FBF and p <= 0x1FC1) or (p >= 0x1FCD and p <= 0x1FCF) or (p >= 0x1FDD and p <= 0x1FDF) or (p >= 0x1FED and p <= 0x1FEF) or p == 0x1FFD or p == 0x1FFE
+
+floor_div : I64, I64 -> I64
+floor_div = |n, d| {
+	q = n // d
+	if n % d < 0 q - 1 else q
+}
+
+## Howard Hinnant's `days_from_civil` and `civil_from_days`, proleptic Gregorian.
+days_from_civil : I64, I64, I64 -> I64
+days_from_civil = |year, month, day| {
+	y = if month <= 2 year - 1 else year
+	era = floor_div(y, 400)
+	yoe = y - era * 400
+	mp = if month > 2 month - 3 else month + 9
+	doy = (153 * mp + 2) // 5 + day - 1
+	doe = yoe * 365 + yoe // 4 - yoe // 100 + doy
+	era * 146097 + doe - 719468
+}
+
+civil : I64 -> { year : I64, month : I64, day : I64 }
+civil = |days| {
+	z = days + 719468
+	era = floor_div(z, 146097)
+	doe = z - era * 146097
+	yoe = (doe - doe // 1460 + doe // 36524 - doe // 146096) // 365
+	doy = doe - (365 * yoe + yoe // 4 - yoe // 100)
+	mp = (5 * doy + 2) // 153
+	day = doy - (153 * mp + 2) // 5 + 1
+	month = if mp < 10 mp + 3 else mp - 9
+	{ year: yoe + era * 400 + (if month <= 2 1 else 0), month, day }
+}
+
+two_digits : I64 -> Str
+two_digits = |n| if n < 10 "0${n.to_str()}" else n.to_str()

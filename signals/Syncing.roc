@@ -135,7 +135,7 @@ local = |model| {
 	attempts: model.attempts,
 	word_reviews: model.word_reviews,
 	reviews: model.entries,
-	settings: Sync.settings({ dark: model.dark, reader_layers: model.reader_layers, positions: model.positions, new_per_day: model.new_per_day, today_scope: model.today_scope }),
+	settings: Sync.settings({ dark: model.dark, reader_layers: model.reader_layers, positions: model.positions, new_per_day: model.new_per_day, today_scope: model.today_scope, reading_goals: model.reading_goals, known_marks: model.known_marks }),
 }
 
 ## An HTTP result as the Account package reads it.

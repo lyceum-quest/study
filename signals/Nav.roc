@@ -3,6 +3,7 @@ import json.JsonValue
 import study.Changelog
 import study.Corpus
 import study.Review
+import study.Reading
 import study.Route
 import study.Study
 import study.Today
@@ -33,6 +34,8 @@ Nav := [].{
 				("positions", |id| Store.get(id, "metadata", "positions")),
 				("settings", |id| Store.get(id, "metadata", "review-settings")),
 				("scope", |id| Store.get(id, "metadata", "today-scope")),
+				("reading-goals", |id| Store.get(id, "metadata", "reading-goals")),
+				("known-words", |id| Store.get(id, "metadata", "known-words")),
 				("progress", |id| Store.get_all(id, "progress")),
 				("cached-corpus", |id| Store.get(id, "metadata", "cached-corpus")),
 			],
@@ -189,6 +192,17 @@ Nav := [].{
 	start_today_in = |model, work| {
 		scoped = save_today_scope({ ..model, today_scope: Some(work), today_mode: Some(Everything), queue_mode: Bool.False, queue_done: Bool.False })
 		go_today(scoped, Everything)
+	}
+
+	## Changes the reading goals and saves them.
+	set_reading_goals : Model.Model, Reading.Goals -> Model.Model
+	set_reading_goals = |model, goals| Model.put_setting({ ..model, reading_goals: goals }, "save", "reading-goals", Reading.encode_goals(goals))
+
+	## Marks `lemma` known now, or clears the mark, and saves the marks.
+	set_known : Model.Model, Str, Bool -> Model.Model
+	set_known = |model, lemma, known| {
+		marks = if known model.known_marks.insert(lemma, model.clock) else model.known_marks.remove(lemma)
+		Model.put_setting({ ..model, known_marks: marks }, "save", "known-words", Reading.encode_marks(marks))
 	}
 
 	set_today_scope : Model.Model, Str -> Model.Model
@@ -503,7 +517,9 @@ decode_lemma_data = |text| {
 	json = JsonValue.decode(text)?
 	lemmas = JsonValue.fields(JsonValue.field(json, "lemmas")?).map_try(|(lemma, found)| Ok((lemma, JsonValue.items(found)?.map_try(occurrence)?)))?
 	passages = JsonValue.fields(JsonValue.field(json, "passages")?).map_try(|(work, refs)| Ok((work, Dict.from_list(JsonValue.fields(refs).map_try(|(ref, passage)| Ok((ref, JsonValue.as_str(passage)?)))?))))?
-	Ok({ lemmas: Dict.from_list(lemmas), passages: Dict.from_list(passages) })
+	found = lemmas.map(|(lemma, all)| (lemma, all.map(|o| { work: o.work, position: o.position, form: o.form })))
+	names = Reading.names(found)
+	Ok({ lemmas: Dict.from_list(lemmas), passages: Dict.from_list(passages), vocabularies: Reading.vocabularies(found, names), names })
 }
 
 ## The passage of `ref` in the open work; a citation that is not one of its
