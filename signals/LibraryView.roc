@@ -225,6 +225,7 @@ today_panel = |session| {
 						)
 				},
 			),
+			Engine.each(model.map(goal_lines), |goal| goal.work, goal_line),
 			Engine.when(
 				model.map(|m| continue_at(m) != None),
 				|| Engine.element(
@@ -482,3 +483,47 @@ next_due = |model, mode| Today.upcoming(model.clock, mode, model.today_scope, mo
 ## A work id is never "*".
 all_works : Str
 all_works = "*"
+
+## A work with a target date, on the Today panel.
+GoalLine : { work : Str, href : Str, title : Str, text : Str }
+
+## The works with a target date, soonest first: what each still takes a day.
+goal_lines : Model.Model -> List(GoalLine)
+goal_lines = |model| {
+	found = readings(model)
+	today = Model.local_day(model)
+	model.reading_goals.dates
+		.to_list()
+		.keep_oks(|(work, date)| Reading.day_of_date(date).map_ok(|day| (work, day)))
+		.sort_with(|(_, a), (_, b)| if a < b Before else if a > b After else Same)
+		.keep_oks(
+			|(work, day)| match found.get(work) {
+				Ok(standing) => {
+					goal = "${model.reading_goals.coverage.to_str()}%"
+					text =
+						if standing.needed == 0 {
+							"${goal} of the words known. Ready to read."
+						} else if day <= today {
+							"${Model.counted(standing.needed, "word", "words")} to go for ${goal}; the target date has passed."
+						} else {
+							per_day = Reading.per_day_for(standing.needed, (day - today).to_u64_wrap())
+							"${goal} by ${Model.format_day(day)}: about ${Model.counted(per_day, "new word", "new words")} a day, ${standing.needed.to_str()} to go."
+						}
+					Ok({ work, href: Route.to_path(Goal(work)), title: Model.work_name(model, work), text })
+				}
+				Err(_) => Err({})
+			},
+		)
+}
+
+goal_line : RowRef(Page.S, GoalLine) -> Elem(Row(Page.S, GoalLine))
+goal_line = |row|
+	Engine.element(
+		"p",
+		[Engine.class("today-goal"), Engine.test_id_s(row.key().map(|work| "today-goal-${work}"))],
+		[
+			Engine.text("Goal: "),
+			Engine.element("a", [Engine.attr_s("href", row.field(|goal| goal.href))], [Engine.text_s(row.field(|goal| goal.title))]),
+			Engine.text_s(row.field(|goal| ", ${goal.text}")),
+		],
+	)
