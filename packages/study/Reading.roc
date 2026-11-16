@@ -235,13 +235,36 @@ Reading := [].{
 		}
 	}
 
-	## Days to learn `needed` lemmas at `per_day` a day (rounded up).
+	## Days until `needed` new lemmas are known at `per_day` a day: the days
+	## introducing them, then `settle_days` for the last ones to pass the
+	## three-week test of a known word.
 	days_to : U64, U64 -> U64
-	days_to = |needed, per_day| if per_day == 0 0 else (needed + per_day - 1) // per_day
+	days_to = |needed, per_day| if needed == 0 0 else if per_day == 0 0 else (needed + per_day - 1) // per_day + settle_days
 
-	## Words a day to learn `needed` lemmas in `days` days (rounded up).
+	## Words a day to know `needed` lemmas `days` days from now (rounded up);
+	## the last `settle_days` are for the newest words to settle.
 	per_day_for : U64, U64 -> U64
-	per_day_for = |needed, days| if days == 0 needed else (needed + days - 1) // days
+	per_day_for = |needed, days| {
+		learning = if days > settle_days days - settle_days else 1
+		if needed == 0 0 else (needed + learning - 1) // learning
+	}
+
+	## How long a newly learned word takes to count as known.
+	settle_days : U64
+	settle_days = 21
+
+	## The `count` most frequent lemmas of a work the learner doesn't know yet.
+	next_words : Vocabulary, Dict(Str, Status), U64 -> List({ lemma : Str, count : U64, status : [Learning, Unseen] })
+	next_words = |vocabulary, known, count|
+		vocabulary.lemmas
+			.keep_oks(
+				|entry| match known.get(entry.lemma) {
+					Ok(Known) => Err({})
+					Ok(Learning) => Ok({ lemma: entry.lemma, count: entry.count, status: Learning })
+					Err(_) => Ok({ lemma: entry.lemma, count: entry.count, status: Unseen })
+				},
+			)
+			.take_first(count)
 
 	## `3 days`, `5 weeks`, `4 months`, `1.5 years`.
 	duration : U64 -> Str

@@ -11,6 +11,7 @@ Route := [].{
 		WorkLanding(Str),
 		Study(Str, Str),
 		Reader(Str, [Some(Str), None]),
+		Goal(Str),
 		Word(Str),
 		WordReview(Str),
 		Stats,
@@ -34,6 +35,7 @@ Route := [].{
 			["review", "word", name] => Ok(WordReview(lemma(name)))
 			[work, "read", passage] => Ok(Reader(work, Some(passage)))
 			[work, "read"] => Ok(Reader(work, None))
+			[work, "goal"] => Ok(Goal(work))
 			[work, passage] => Ok(Study(work, passage))
 			[work] => Ok(WorkLanding(work))
 			_ => Err(NoRoute)
@@ -70,6 +72,7 @@ Route := [].{
 			Today => "/today"
 			Reader(work, Some(passage)) => "/${work}/read/${passage}"
 			Reader(work, None) => "/${work}/read"
+			Goal(work) => "/${work}/goal"
 		}
 		"#${path}"
 	}

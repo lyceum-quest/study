@@ -98,6 +98,7 @@ base_path = |model| {
 	passage = Model.current_ref(model)
 	match model.screen {
 		LibraryScreen => Some(Route.to_path(Library))
+		GoalScreen(work) => Some(Route.to_path(Goal(work)))
 		SettingsScreen => Some(Route.to_path(Settings))
 		WorkspaceScreen => for_work(model, |work| Study(work, passage))
 		ReaderScreen => for_work(model, |work| Reader(work, Some(passage)))

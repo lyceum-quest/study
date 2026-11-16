@@ -28,7 +28,7 @@ import Store
 ## both from the platform.
 Model := [].{
 
-	Screen : [LibraryScreen, WorkspaceScreen, SettingsScreen, ReaderScreen, TodayScreen, WordScreen(Str), WordReviewScreen(Str), StatsScreen, WhatsNewScreen]
+	Screen : [LibraryScreen, GoalScreen(Str), WorkspaceScreen, SettingsScreen, ReaderScreen, TodayScreen, WordScreen(Str), WordReviewScreen(Str), StatsScreen, WhatsNewScreen]
 
 	PopupTab : [WordTab, SentenceTab]
 
@@ -320,6 +320,34 @@ Model := [].{
 		}
 	}
 
+	## The words a day reading plans assume: the learner's choice, else their
+	## pace, else Reading.default_pace.
+	plan_pace : Model.Model -> U64
+	plan_pace = |model|
+		if model.reading_goals.per_day > 0 {
+			model.reading_goals.per_day
+		} else {
+			with_default(Reading.pace(model.clock, model.attempts, model.word_reviews), Reading.default_pace)
+		}
+
+	## A work's vocabulary, once the lemma index has loaded.
+	vocabulary : Model.Model, Str -> [Some(Reading.Vocabulary), None]
+	vocabulary = |model, work|
+		match model.lemma_index {
+			IndexLoaded(data) => match data.vocabularies.get(work) {
+				Ok(found) => Some(found)
+				Err(_) => None
+			}
+			_ => None
+		}
+
+	## `1 Mar 2027`: a day number (see Reading.day_of_date).
+	format_day : I64 -> Str
+	format_day = |days| {
+		date = civil(days)
+		"${date.day.to_str()} ${month_name(date.month)} ${date.year.to_str()}"
+	}
+
 	## Which lemmas the learner knows or is learning (see Reading.statuses).
 	known_words : Model.Model -> Dict(Str, Reading.Status)
 	known_words = |model| Reading.statuses(model.attempts, model.word_reviews, model.word_cards, model.known_marks)
@@ -358,6 +386,7 @@ Model := [].{
 		match (model.screen, model.active) {
 			(LibraryScreen, _) => "Lyceum Study · Greek reading workspace"
 			(SettingsScreen, _) => "Study tools · Lyceum Study"
+			(GoalScreen(work), _) => "Reading goal · ${work_name(model, work)} · Lyceum Study"
 			(TodayScreen, _) => "Today · Lyceum Study"
 			(StatsScreen, _) => "Progress · Lyceum Study"
 			(WhatsNewScreen, _) => "What's new · Lyceum Study"
@@ -383,21 +412,7 @@ Model := [].{
 		days = floor_div(local, day_ms)
 		minutes_of_day = (local - days * day_ms) // 60000
 		date = civil(days)
-		month = match date.month {
-			1 => "Jan"
-			2 => "Feb"
-			3 => "Mar"
-			4 => "Apr"
-			5 => "May"
-			6 => "Jun"
-			7 => "Jul"
-			8 => "Aug"
-			9 => "Sep"
-			10 => "Oct"
-			11 => "Nov"
-			_ => "Dec"
-		}
-		"${date.day.to_str()} ${month} ${date.year.to_str()}, ${two_digits(minutes_of_day // 60)}:${two_digits(minutes_of_day % 60)}"
+		"${date.day.to_str()} ${month_name(date.month)} ${date.year.to_str()}, ${two_digits(minutes_of_day // 60)}:${two_digits(minutes_of_day % 60)}"
 	}
 
 	## Whether this device syncs: signed in to an account that includes sync.
@@ -466,3 +481,20 @@ civil = |days| {
 
 two_digits : I64 -> Str
 two_digits = |n| if n < 10 "0${n.to_str()}" else n.to_str()
+
+month_name : I64 -> Str
+month_name = |month|
+	match month {
+		1 => "Jan"
+		2 => "Feb"
+		3 => "Mar"
+		4 => "Apr"
+		5 => "May"
+		6 => "Jun"
+		7 => "Jul"
+		8 => "Aug"
+		9 => "Sep"
+		10 => "Oct"
+		11 => "Nov"
+		_ => "Dec"
+	}

@@ -4743,3 +4743,144 @@ a.secondary-button {
 .whats-new-version h2 { margin: 0 0 0.6rem; padding-bottom: 0.3rem; border-bottom: 1px solid currentColor; }
 .whats-new-version h3 { margin: 1rem 0 0.3rem; }
 .whats-new-version li { margin: 0.3rem 0; line-height: 1.5; }
+
+/* Reading goals: a work's coverage, goal and plan */
+.goal-page {
+  max-width: 46rem;
+}
+
+.goal-coverage {
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-strong);
+}
+
+.goal-coverage-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.goal-percent {
+  color: var(--ink);
+  font-size: 2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-track {
+  position: relative;
+  display: block;
+  overflow: visible;
+}
+
+.goal-track .progress-fill {
+  overflow: hidden;
+}
+
+.goal-marker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 16px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--gold);
+}
+
+.goal-note,
+.goal-needed {
+  margin: 10px 0 0;
+}
+
+.goal-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.goal-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.goal-field select,
+.goal-number,
+.goal-date {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface-input);
+  font: inherit;
+}
+
+.goal-number {
+  width: 5.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-result {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.goal-pace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.9rem;
+}
+
+.goal-explainer {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.goal-explainer summary {
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.goal-explainer p {
+  margin: 8px 0 0;
+}
+
+.goal-words {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  padding-left: 1.4rem;
+}
+
+.goal-words li {
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-words a {
+  font-family: var(--greek);
+  font-size: 1.05rem;
+}
+
+.goal-count,
+.goal-status {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.work-row-reading {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}

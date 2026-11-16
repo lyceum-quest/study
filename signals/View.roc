@@ -16,6 +16,7 @@ import study.Account
 import LibraryView
 import WorkspaceView
 import WordsView
+import GoalView
 import WhatsNewView
 import StatsView
 import SettingsView
@@ -55,9 +56,10 @@ View := [].{
 				),
 				Engine.switch(
 					model.map(screen_name),
-					["library", "workspace", "reader", "loading", "today", "word", "word-review", "whats-new", "stats", "settings"],
+					["library", "goal", "workspace", "reader", "loading", "today", "word", "word-review", "whats-new", "stats", "settings"],
 					|found| match found {
 						"library" => LibraryView.view(session)
+						"goal" => GoalView.view(session)
 						"today" => WordsView.today_page(session)
 						"word" => WordsView.word_page(session)
 						"word-review" => WordsView.word_review(session)
@@ -127,6 +129,7 @@ screen_name : Model.Model -> Str
 screen_name = |model|
 	match model.screen {
 		LibraryScreen => "library"
+		GoalScreen(_) => "goal"
 		TodayScreen => "today"
 		WordScreen(_) => "word"
 		WordReviewScreen(_) => "word-review"
