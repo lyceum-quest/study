@@ -4884,3 +4884,13 @@ a.secondary-button {
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
+
+.word-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 4px 0 10px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
