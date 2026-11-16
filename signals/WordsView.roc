@@ -155,6 +155,17 @@ WordsView := [].{
 					[
 						Html.p("Word", "eyebrow"),
 						Engine.element("h1", [Engine.attr("lang", "grc")], [Engine.text_s(model.map(|m| Corpus.display_lemma(Model.screen_lemma(m))))]),
+						Html.div(
+							"word-status",
+							[
+								Html.span_s(model.map(|m| word_status(m, Model.screen_lemma(m))), [Engine.test_id("word-status")]),
+								Engine.when(
+									model.map(|m| known_action(m, Model.screen_lemma(m)) != ""),
+									|| Html.button_s(model.map(|m| known_action(m, Model.screen_lemma(m))), [Engine.class("text-button"), Engine.attr("type", "button")], Page.act(session, toggle_known)),
+									|| Engine.text(""),
+								),
+							],
+						),
 						Engine.when(
 							model.map(|m| m.word_cards.contains(Model.screen_lemma(m))),
 							|| Html.div(
@@ -453,3 +464,29 @@ context_field = |model, pick|
 
 context_text_of : Signal(Page.S, Model.Model), (Words.Occurrence -> Str) -> Signal(Page.S, Str)
 context_text_of = |model, pick| model.map(|m| context_field(m, pick))
+
+## Whether the learner knows the word (see Reading.statuses).
+word_status : Model.Model, Str -> Str
+word_status = |model, lemma| {
+	marked = model.known_marks.contains(lemma)
+	match Model.known_words(model).get(lemma) {
+		Ok(Known) => if marked "Known: you marked it." else "Known: recalled right on days three weeks apart."
+		Ok(Learning) => "Learning: known once recalled right on days three weeks apart."
+		Err(_) => "New to you."
+	}
+}
+
+## The toggle for marking the word known: none once it is known by recall.
+known_action : Model.Model, Str -> Str
+known_action = |model, lemma|
+	match (Model.known_words(model).get(lemma), model.known_marks.contains(lemma)) {
+		(Ok(Known), Bool.True) => "Unmark"
+		(Ok(Known), Bool.False) => ""
+		_ => "I already know this word"
+	}
+
+toggle_known : Model.Model -> Model.Model
+toggle_known = |model| {
+	lemma = Model.screen_lemma(model)
+	Nav.set_known(model, lemma, known_action(model, lemma) != "Unmark")
+}

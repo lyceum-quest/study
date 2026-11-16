@@ -14,6 +14,13 @@
     (expect-text (text " · missed 1 of 1 · you answered is") " · missed 1 of 1 · you answered is")
     (expect-text (role heading :name "Every occurrence · 1") "Every occurrence · 1")
     (expect-text (text " · was") " · was")
+    ; Missed, so still being learned, unless the learner knows it already.
+    (expect-text (test-id "word-status") "Learning: known once recalled right on days three weeks apart.")
+    (click (role button :name "I already know this word"))
+    (expect-text (test-id "word-status") "Known: you marked it.")
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"save:10\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"known-words\",\"value\":{\"εἰμί\":1762905600000}}}]")
+    (click (role button :name "Unmark"))
+    (expect-text (test-id "word-status") "Learning: known once recalled right on days three weeks apart.")
     (click (role link :name "Review now →"))
     (expect-current-location "/signals/#/review/word/%CE%B5%E1%BC%B0%CE%BC%CE%AF")
   )
