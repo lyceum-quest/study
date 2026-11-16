@@ -44,8 +44,8 @@ numbers = |data|
 					Html.div(
 						"stat-tiles",
 						[
-							tile(data, "Words known", |s| s.known.to_str(), Engine.const("Trouble words now three weeks or more apart")),
-							tile(data, "Words learning", |s| s.learning.to_str(), Engine.const("Missed in a passage, still being drilled")),
+							tile(data, "Words known", |s| s.known.to_str(), Engine.const("Recalled right on days three weeks apart")),
+							tile(data, "Words learning", |s| s.learning.to_str(), Engine.const("Answered, not yet known")),
 							tile(data, "Passages studied", |s| s.studied.to_str(), data.map(|s| "of ${s.passages.to_str()}")),
 							tile(data, "Streak", |s| Model.counted(s.streak, "day", "days"), Engine.const("Days in a row with a review")),
 							tile(data, "Right, last 7 days", |s| s.recent_right, data.map(|s| Model.counted(s.recent_total, "word answer", "word answers"))),
@@ -131,13 +131,14 @@ summary : Model.Model -> Summary
 summary = |model| {
 	now = model.clock
 	words = model.word_cards.values()
-	known = words.count_if(Words.is_mature)
+	statuses = Model.known_words(model).values()
+	known = statuses.count_if(|status| status == Known)
 	times = Stats.review_times(model.attempts, model.word_reviews)
 	entries = model.entries.values()
 	recent = Stats.recent_words(now, model.attempts, model.word_reviews)
 	{
 		known,
-		learning: words.len() - known,
+		learning: statuses.len() - known,
 		studied: model.entries.len(),
 		passages: model.works.fold(0, |total, work| total + work.passages.len()),
 		streak: Stats.streak(now, times).to_u64_wrap(),
