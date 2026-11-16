@@ -101,6 +101,7 @@ coverage_checks = {
 		check("standing knowing καί, 90%", Reading.standing(luke, some, 90), { tokens: 12, known_tokens: 6, unknown: 4, needed: 3 }),
 		check("percent rounds down", Reading.percent({ tokens: 12, known_tokens: 11, unknown: 1, needed: 0 }), 91),
 		check("percent of nothing", Reading.percent({ tokens: 0, known_tokens: 0, unknown: 0, needed: 0 }), 100),
+		check("next words", Reading.next_words(luke, some, 2), [{ lemma: "λόγος", count: 2, status: Learning }, { lemma: "ἅγιος", count: 2, status: Unseen }]),
 	]
 }
 
@@ -175,8 +176,8 @@ pace_checks = {
 		check("pace", Reading.pace(now, attempts, []), Some(1)),
 		check("pace too early", Reading.pace(t0 + 3 * day, attempts, []), None),
 		check("pace with reviews", Reading.pace(now, attempts, List.repeat(0, 56).map_with_index(|_, n| { lemma: "l${n.to_str()}", at: now - day, rating: Good, occurrence: { work: "luke", passage: "1.1", position: 1, form: "f", gloss: "g", text: "t", guess: "g" } })), Some(2)),
-		check("days to", (Reading.days_to(100, 15), Reading.days_to(0, 15), Reading.days_to(30, 15)), (7, 0, 2)),
-		check("per day for", (Reading.per_day_for(100, 7), Reading.per_day_for(100, 0)), (15, 100)),
+		check("days to, with three weeks to settle", (Reading.days_to(100, 15), Reading.days_to(0, 15), Reading.days_to(30, 15)), (28, 0, 23)),
+		check("per day for", (Reading.per_day_for(100, 28), Reading.per_day_for(100, 0), Reading.per_day_for(0, 5)), (15, 100, 0)),
 		check("durations", [0, 1, 5, 20, 90, 400, 900].map(Reading.duration), ["now", "1 day", "5 days", "3 weeks", "3 months", "13 months", "2.5 years"]),
 	]
 }

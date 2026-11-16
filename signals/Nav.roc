@@ -68,7 +68,9 @@ Nav := [].{
 	apply_route : Model.Model, Route.Route -> Model.Model
 	apply_route = |model, route|
 		match route {
-			Library => { ..model, screen: LibraryScreen, pending_route: None }
+			# The library shows how readable each work is, from the lemma index.
+			Library => { ..model, screen: LibraryScreen, pending_route: None, lemma_index: load_lemma_index(model) }
+			Goal(work) => { ..model, screen: GoalScreen(work), pending_route: None, lemma_index: load_lemma_index(model) }
 			Settings => { ..model, screen: SettingsScreen, pending_route: None }
 			Today => { ..model, screen: TodayScreen, pending_route: None, today_mode: Some(query_mode(model)) }
 			Stats => { ..model, screen: StatsScreen, pending_route: None }
@@ -79,13 +81,7 @@ Nav := [].{
 				}
 				{ ..model, screen: WhatsNewScreen, pending_route: None, changelog }
 			}
-			Word(name) => {
-				lemma_index = match model.lemma_index {
-					IndexLoaded(_) => model.lemma_index
-					_ => IndexLoading
-				}
-				{ ..model, screen: WordScreen(name), pending_route: None, lemma_index }
-			}
+			Word(name) => { ..model, screen: WordScreen(name), pending_route: None, lemma_index: load_lemma_index(model) }
 			WordReview(name) => {
 				word_answer = if model.screen == WordReviewScreen(name) model.word_answer else { guess: "", revealed: Bool.False }
 				today_mode = match model.query.get("today") {
@@ -551,3 +547,11 @@ occurrence = |item|
 
 field_str : JsonValue, Str -> Try(Str, Str)
 field_str = |item, name| JsonValue.as_str(JsonValue.field(item, name)?)
+
+## The lemma index, asked for unless it has loaded (a failed load is tried again).
+load_lemma_index : Model.Model -> Model.LemmaIndex
+load_lemma_index = |model|
+	match model.lemma_index {
+		IndexLoaded(_) => model.lemma_index
+		_ => IndexLoading
+	}

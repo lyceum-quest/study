@@ -59,8 +59,11 @@ Library := [].{
 	## app's `String.toLower`, Greek letters match only in the case typed
 	## (https://github.com/thebrandonlucas/roc-issues/tree/master/roc/IMPROVEMENT-009-unicode-case-mapping);
 	## use Unicode lowercasing once Roc has it.
-	shown : List(Corpus.Work), Dict(Str, I64), Str, Sort -> List(Corpus.Work)
-	shown = |works, activity, search, sort| {
+	##
+	## "easiest" puts the works whose words the learner knows best first, by
+	## `coverage` (known running words per thousand); works without one go last.
+	shown : List(Corpus.Work), Dict(Str, I64), Dict(Str, U64), Str, Sort -> List(Corpus.Work)
+	shown = |works, activity, coverage, search, sort| {
 		query = search.trim().with_ascii_lowercased()
 		matches = |work| {
 			fields = match work.citation {
@@ -72,6 +75,15 @@ Library := [].{
 		sorted = match sort {
 			"title" => sort_by(works, |a, b| compare_text(a.title, b.title))
 			"short" => sort_by(works, |a, b| compare_u64(a.passages.len(), b.passages.len()))
+			"easiest" => sort_by(
+				works,
+				|a, b| match (coverage.get(a.id), coverage.get(b.id)) {
+					(Ok(x), Ok(y)) if x != y => compare_u64(y, x)
+					(Ok(_), Err(_)) => Before
+					(Err(_), Ok(_)) => After
+					_ => compare_text(a.title, b.title)
+				},
+			)
 			_ => sort_by(
 				works,
 				|a, b| match compare_i64(activity_of(activity, b), activity_of(activity, a)) {

@@ -3,6 +3,7 @@ import pf.Html
 import fsrs.FsrsMath
 import study.Corpus
 import study.Library
+import study.Reading
 import study.Review
 import study.Route
 import study.Today
@@ -25,6 +26,9 @@ LibraryView := [].{
 		position : Str,
 		title : Str,
 		meta : Str,
+		# How readable the work is (once the lemma index has loaded), and its goal page.
+		reading : Str,
+		goal_url : Str,
 		action : Str,
 		loading : Bool,
 		edition : Str,
@@ -76,7 +80,7 @@ LibraryView := [].{
 									Engine.const("Sort the library"),
 									model.map(|m| m.sort),
 									[Engine.class("library-sort")],
-									[Html.option("recent", "Recently studied"), Html.option("title", "Title"), Html.option("short", "Shortest first")],
+									[Html.option("recent", "Recently studied"), Html.option("easiest", "Easiest first"), Html.option("title", "Title"), Html.option("short", "Shortest first")],
 									Page.act_value(session, |m, sort| { ..m, sort }),
 								),
 							],
@@ -305,18 +309,49 @@ working_on = |model| {
 }
 
 shown : Model.Model -> List(Corpus.Work)
-shown = |model| Library.shown(model.works, activity(model), model.search, model.sort)
+shown = |model| {
+	coverage = if model.sort == "easiest" readings(model).map(|_, found| if found.tokens == 0 1000 else found.known_tokens * 1000 // found.tokens) else Dict.empty()
+	Library.shown(model.works, activity(model), coverage, model.search, model.sort)
+}
+
+## How readable each work is at the learner's goal, once the lemma index has loaded.
+readings : Model.Model -> Dict(Str, Reading.Standing)
+readings = |model|
+	match model.lemma_index {
+		IndexLoaded(data) => {
+			known = Model.known_words(model)
+			data.vocabularies.map(|_, vocabulary| Reading.standing(vocabulary, known, model.reading_goals.coverage))
+		}
+		_ => Dict.empty()
+	}
 
 rows : Model.Model, List(Corpus.Work) -> List(LibraryView.WorkRow)
-rows = |model, works| works.map_with_index(|work, index| work_row(model, work, index))
+rows = |model, works| {
+	found = readings(model)
+	works.map_with_index(|work, index| work_row(model, found, work, index))
+}
 
-work_row : Model.Model, Corpus.Work, U64 -> LibraryView.WorkRow
-work_row = |model, work, index| {
+## `62% of words known · 340 to learn for 95%`.
+reading_line : Model.Model, Dict(Str, Reading.Standing), Str -> Str
+reading_line = |model, found, work|
+	match found.get(work) {
+		Ok(standing) => {
+			goal = model.reading_goals.coverage.to_str()
+			learn = if standing.needed == 0 "at your ${goal}% goal" else "${Model.counted(standing.needed, "word", "words")} to learn for ${goal}%"
+			"${Reading.percent(standing).to_str()}% of words known · ${learn}"
+		}
+		Err(_) => ""
+	}
+
+work_row : Model.Model, Dict(Str, Reading.Standing), Corpus.Work, U64 -> LibraryView.WorkRow
+work_row = |model, standings, work, index| {
 	row = {
 		id: work.id,
 		position: (index + 1).to_str(),
 		title: work.title,
 		meta: Library.meta(model.clock, work, model.entries),
+		reading: reading_line(model, standings, work.id),
+		goal_url: Route.to_path(Goal(work.id)),
 		action: if Library.progress(model.clock, work, model.entries).studied == 0 "Start →" else "Study →",
 		loading: model.pending_route != None and model.requested_work == Some(work.id),
 		edition: work.edition,
@@ -373,6 +408,19 @@ work_rows = |session, section, found|
 								[
 									Engine.element("h3", [Engine.class("work-row-title"), Engine.test_id_s(row.field(|work| "${section}-${work.position}"))], [Engine.text_s(row.field(|work| work.title))]),
 									Html.p_s(row.field(|work| work.meta), [Engine.class("work-row-meta"), Engine.test_id_s(id.map(|work| "${section}:${work}"))]),
+									Engine.when(
+										row.field(|work| work.reading != ""),
+										|| Engine.element(
+											"p",
+											[Engine.class("work-row-reading")],
+											[
+												Html.span_s(row.field(|work| work.reading), [Engine.test_id_s(id.map(|work| "${section}:${work}:reading"))]),
+												Engine.text(" · "),
+												Engine.element("a", [Engine.attr_s("href", row.field(|work| work.goal_url)), Engine.test_id_s(id.map(|work| "${section}:${work}:goal"))], [Engine.text("Reading goal")]),
+											],
+										),
+										|| Engine.text(""),
+									),
 									Engine.element(
 										"details",
 										[Engine.class("work-row-sources")],
