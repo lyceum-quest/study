@@ -4,6 +4,7 @@ import study.Account
 import study.Changelog
 import study.Corpus
 import study.Review
+import study.Reading
 import study.Route
 import study.Study
 import study.Sync
@@ -42,7 +43,8 @@ Model := [].{
 	## Every word occurrence across the library (`preload/lemmas.json`), for word pages.
 	Occurrence : { work : Str, ref : Str, position : I64, form : Str, gloss : Str }
 
-	LemmaData : { lemmas : Dict(Str, List(Occurrence)), passages : Dict(Str, Dict(Str, Str)) }
+	## `vocabularies` and `names` are computed from `lemmas` once, as it loads (see Reading).
+	LemmaData : { lemmas : Dict(Str, List(Occurrence)), passages : Dict(Str, Dict(Str, Str)), vocabularies : Dict(Str, Reading.Vocabulary), names : Set(Str) }
 
 	LemmaIndex : [IndexNotLoaded, IndexLoading, IndexLoaded(LemmaData), IndexFailed]
 
@@ -92,6 +94,9 @@ Model := [].{
 		extra_new : { day : I64, count : I64 },
 		today_mode : [Some(Today.Mode), None],
 		today_scope : [Some(Str), None],
+		# Reading goals and the words the learner marked known (see Reading).
+		reading_goals : Reading.Goals,
+		known_marks : Dict(Str, I64),
 		word_answer : { guess : Str, revealed : Bool },
 		# The reader.
 		reader_gloss : [Some((U64, U64)), None],
@@ -174,6 +179,8 @@ Model := [].{
 		extra_new: { day: 0, count: 0 },
 		today_mode: None,
 		today_scope: None,
+		reading_goals: Reading.default_goals,
+		known_marks: Dict.empty(),
 		word_answer: { guess: "", revealed: Bool.False },
 		reader_gloss: None,
 		reader_revealed: Set.empty(),
@@ -311,6 +318,14 @@ Model := [].{
 			!today_plan(more).new.is_empty()
 		}
 	}
+
+	## Which lemmas the learner knows or is learning (see Reading.statuses).
+	known_words : Model.Model -> Dict(Str, Reading.Status)
+	known_words = |model| Reading.statuses(model.attempts, model.word_reviews, model.word_cards, model.known_marks)
+
+	## Today's day number in the browser's time zone (days since 1970-01-01).
+	local_day : Model.Model -> I64
+	local_day = |model| floor_div(model.clock + model.offset * 60000, 86400000)
 
 	## The occurrence to quiz a word in: when studying one work, its latest occurrence there.
 	review_context : Model.Model, Words.Card -> Words.Occurrence

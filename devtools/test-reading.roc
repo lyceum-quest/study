@@ -6,6 +6,7 @@ app [main!] {
 }
 
 import pf.Stdout
+import json.JsonValue
 import study.Reading
 import study.Study
 import study.Words
@@ -20,6 +21,7 @@ main! = |_args| {
 		("vocabularies and coverage", coverage_checks),
 		("known words", known_checks),
 		("pace and calculator", pace_checks),
+		("goals and dates", goal_checks),
 	]
 	var $failures = []
 	for (title, checks) in groups {
@@ -176,5 +178,20 @@ pace_checks = {
 		check("days to", (Reading.days_to(100, 15), Reading.days_to(0, 15), Reading.days_to(30, 15)), (7, 0, 2)),
 		check("per day for", (Reading.per_day_for(100, 7), Reading.per_day_for(100, 0)), (15, 100)),
 		check("durations", [0, 1, 5, 20, 90, 400, 900].map(Reading.duration), ["now", "1 day", "5 days", "3 weeks", "3 months", "13 months", "2.5 years"]),
+	]
+}
+
+goal_checks : List(Check)
+goal_checks = {
+	goals = { coverage: 98, per_day: 20, dates: Dict.empty().insert("luke", "2027-03-01") }
+	marks = Dict.empty().insert("λόγος", t0)
+	decoded = |text| Reading.decode_goals(JsonValue.decode(text) ?? JsonValue.null)
+	[
+		check("goals round trip", Reading.decode_goals(Reading.encode_goals(goals)), goals),
+		check("goals encoded", JsonValue.encode(Reading.encode_goals(goals)), "{\"coverage\":98,\"perDay\":20,\"targets\":{\"luke\":\"2027-03-01\"}}"),
+		check("goals defaults", decoded("{\"coverage\":7,\"perDay\":-1}"), Reading.default_goals),
+		check("marks round trip", Reading.decode_marks(Reading.encode_marks(marks)), marks),
+		check("day of date", (Reading.day_of_date("1970-01-01"), Reading.day_of_date("2026-01-01"), Reading.day_of_date("2024-02-29"), Reading.day_of_date("soon")), (Ok(0), Ok(20454), Ok(19782), Err(BadDate))),
+		check("date of day", [0, 20454, 19782, -1].map(Reading.date_of_day), ["1970-01-01", "2026-01-01", "2024-02-29", "1969-12-31"]),
 	]
 }

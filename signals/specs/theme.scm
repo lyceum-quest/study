@@ -7,6 +7,6 @@
     (expect-attr (role button :name "Use dark theme") "aria-pressed" "false")
     (click (role button :name "Use dark theme"))
     (expect-attr (role button :name "Use light theme") "aria-pressed" "true")
-    (expect-attr (test-id "store") "data-request" "[{\"id\":\"save:8\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"theme\",\"value\":\"dark\"}}]")
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"save:10\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"theme\",\"value\":\"dark\"}}]")
   )
 )

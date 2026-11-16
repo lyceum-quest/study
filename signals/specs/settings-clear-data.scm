@@ -3,7 +3,7 @@
     ; One attempt: λόγος right but revealed early, ἦν (εἰμί) wrong.
     (initial-location "/signals/#/settings"))
   (steps
-    (change (test-id "store") "{\"id\":\"progress:6\",\"ok\":true,\"value\":[{\"id\":\"attempt:demo:1.1:1762819200000\",\"type\":\"attempt\",\"work\":\"demo\",\"passage\":\"1.1\",\"sentenceId\":\"1.1\",\"sentenceText\":\"λόγος , ἦν\",\"startedAt\":1762819100000,\"finishedAt\":1762819200000,\"items\":[{\"key\":\"w:1\",\"kind\":\"word\",\"form\":\"λόγος\",\"lemma\":\"λόγος\",\"guess\":\"word\",\"reference\":\"word\",\"revealedEarly\":true,\"mark\":true},{\"key\":\"w:3\",\"kind\":\"word\",\"form\":\"ἦν\",\"lemma\":\"εἰμί\",\"guess\":\"is\",\"reference\":\"was\",\"revealedEarly\":false,\"mark\":false},{\"key\":\"prose\",\"kind\":\"prose\",\"form\":\"\",\"lemma\":\"\",\"guess\":\"\",\"reference\":\"There was the word\",\"revealedEarly\":false,\"mark\":null}],\"rating\":\"hard\"}],\"now\":1762905600000}")
+    (change (test-id "store") "{\"id\":\"progress:8\",\"ok\":true,\"value\":[{\"id\":\"attempt:demo:1.1:1762819200000\",\"type\":\"attempt\",\"work\":\"demo\",\"passage\":\"1.1\",\"sentenceId\":\"1.1\",\"sentenceText\":\"λόγος , ἦν\",\"startedAt\":1762819100000,\"finishedAt\":1762819200000,\"items\":[{\"key\":\"w:1\",\"kind\":\"word\",\"form\":\"λόγος\",\"lemma\":\"λόγος\",\"guess\":\"word\",\"reference\":\"word\",\"revealedEarly\":true,\"mark\":true},{\"key\":\"w:3\",\"kind\":\"word\",\"form\":\"ἦν\",\"lemma\":\"εἰμί\",\"guess\":\"is\",\"reference\":\"was\",\"revealedEarly\":false,\"mark\":false},{\"key\":\"prose\",\"kind\":\"prose\",\"form\":\"\",\"lemma\":\"\",\"guess\":\"\",\"reference\":\"There was the word\",\"revealedEarly\":false,\"mark\":null}],\"rating\":\"hard\"}],\"now\":1762905600000}")
     (expect-text (test-id "graded-attempts") "1")
     (expect-text (test-id "answers-marked") "2")
     (expect-text (test-id "marked-right") "50%")
@@ -15,7 +15,7 @@
     (expect-absent (role button :name "Delete saved data"))
     (click (role button :name "Clear saved data…"))
     (click (role button :name "Delete saved data"))
-    (expect-attr (test-id "store") "data-request" "[{\"id\":\"clear:8\",\"operation\":\"clear\",\"store\":\"progress\"},{\"id\":\"clear:9\",\"operation\":\"clear\",\"store\":\"metadata\"}]")
+    (expect-attr (test-id "store") "data-request" "[{\"id\":\"clear:10\",\"operation\":\"clear\",\"store\":\"progress\"},{\"id\":\"clear:11\",\"operation\":\"clear\",\"store\":\"metadata\"}]")
     (expect-text (test-id "notice") "Saved study data cleared from this device.")
     (expect-visible (role button :name "Clear saved data…"))
     (expect-text (test-id "graded-attempts") "0")
