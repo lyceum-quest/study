@@ -20,6 +20,7 @@ main! = |_args| {
 		("proper names", name_checks),
 		("vocabularies and coverage", coverage_checks),
 		("known words", known_checks),
+		("reading as evidence", reading_checks),
 		("pace and calculator", pace_checks),
 		("goals and dates", goal_checks),
 	]
@@ -145,7 +146,7 @@ attempts = [
 ]
 
 statuses : Dict(Str, I64) -> Dict(Str, Reading.Status)
-statuses = |marked| Reading.statuses(attempts, [], Words.cards(attempts, []), marked)
+statuses = |marked| Reading.statuses(attempts, [], Words.cards(attempts, []), marked, [])
 
 # καί missed once in a passage, so it has a word review card, here stable for only 3 days.
 unstable : Dict(Str, Words.Card)
@@ -165,7 +166,7 @@ known_checks = {
 		check("marked, then missed", marked.get("θεός"), Ok(Learning)),
 		check("marked, never answered", marked.get("ἰησοῦς"), Ok(Known)),
 		# A word review card not yet stable for two weeks holds the word at learned.
-		check("unstable card", Reading.statuses(attempts, [], unstable, Dict.empty()).get("καί"), Ok(Learned)),
+		check("unstable card", Reading.statuses(attempts, [], unstable, Dict.empty(), []).get("καί"), Ok(Learned)),
 	]
 }
 
@@ -195,5 +196,35 @@ goal_checks = {
 		check("marks round trip", Reading.decode_marks(Reading.encode_marks(marks)), marks),
 		check("day of date", (Reading.day_of_date("1970-01-01"), Reading.day_of_date("2026-01-01"), Reading.day_of_date("2024-02-29"), Reading.day_of_date("soon")), (Ok(0), Ok(20454), Ok(19782), Err(BadDate))),
 		check("date of day", [0, 20454, 19782, -1].map(Reading.date_of_day), ["1970-01-01", "2026-01-01", "2024-02-29", "1969-12-31"]),
+	]
+}
+
+reading_checks : List(Check)
+reading_checks = {
+	# Passage 1.1 of luke holds ὁ, καί and λόγος; 1.2 holds ὁ and θεός.
+	by_passage = Reading.passage_lemmas(
+		[
+			("ὁ", [{ work: "luke", ref: "1.1" }, { work: "luke", ref: "1.2" }]),
+			("καί", [{ work: "luke", ref: "1.1" }]),
+			("λόγος", [{ work: "luke", ref: "1.1" }]),
+			("θεός", [{ work: "luke", ref: "1.2" }]),
+		],
+	)
+	# 1.1 graded on day 0 (λόγος missed) and day 14 (λόγος revealed); 1.2 on day 1.
+	graded = [
+		{ ..attempt(t0, [item("λόγος", Some(Bool.False), Bool.False)]), passage: "1.1" },
+		{ ..attempt(t0 + day, []), passage: "1.2" },
+		{ ..attempt(t0 + 14 * day, [item("λόγος", None, Bool.True)]), passage: "1.1" },
+	]
+	read = Reading.read_events(graded, by_passage)
+	known = Reading.statuses(graded, [], Dict.empty(), Dict.empty(), read)
+	[
+		check("lemmas by passage", (by_passage.get("luke 1.1").map_ok(|set| set.len()), by_passage.get("luke 1.2").map_ok(|set| set.len())), (Ok(3), Ok(2))),
+		check("read events skip missed and revealed words", read.len(), 6),
+		check("no events for the troubled word", read.any(|event| event.lemma == "λόγος"), Bool.False),
+		check("days 0 and 14: known", known.get("καί"), Ok(Known)),
+		check("days 0, 1 and 14: known", known.get("ὁ"), Ok(Known)),
+		check("one day: learning", known.get("θεός"), Ok(Learning)),
+		check("missed, then revealed: learning", known.get("λόγος"), Ok(Learning)),
 	]
 }

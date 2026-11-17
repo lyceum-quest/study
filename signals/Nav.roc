@@ -515,7 +515,8 @@ decode_lemma_data = |text| {
 	passages = JsonValue.fields(JsonValue.field(json, "passages")?).map_try(|(work, refs)| Ok((work, Dict.from_list(JsonValue.fields(refs).map_try(|(ref, passage)| Ok((ref, JsonValue.as_str(passage)?)))?))))?
 	found = lemmas.map(|(lemma, all)| (lemma, all.map(|o| { work: o.work, position: o.position, form: o.form })))
 	names = Reading.names(found)
-	Ok({ lemmas: Dict.from_list(lemmas), passages: Dict.from_list(passages), vocabularies: Reading.vocabularies(found, names), names })
+	passage_lemmas = Reading.passage_lemmas(lemmas.map(|(lemma, all)| (lemma, all.map(|o| { work: o.work, ref: o.ref }))))
+	Ok({ lemmas: Dict.from_list(lemmas), passages: Dict.from_list(passages), vocabularies: Reading.vocabularies(found, names), names, passage_lemmas })
 }
 
 ## The passage of `ref` in the open work; a citation that is not one of its

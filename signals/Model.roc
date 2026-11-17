@@ -44,8 +44,8 @@ Model := [].{
 	## Every word occurrence across the library (`preload/lemmas.json`), for word pages.
 	Occurrence : { work : Str, ref : Str, position : I64, form : Str, gloss : Str }
 
-	## `vocabularies` and `names` are computed from `lemmas` once, as it loads (see Reading).
-	LemmaData : { lemmas : Dict(Str, List(Occurrence)), passages : Dict(Str, Dict(Str, Str)), vocabularies : Dict(Str, Reading.Vocabulary), names : Set(Str) }
+	## `vocabularies`, `names` and `passage_lemmas` are computed from `lemmas` once, as it loads (see Reading).
+	LemmaData : { lemmas : Dict(Str, List(Occurrence)), passages : Dict(Str, Dict(Str, Str)), vocabularies : Dict(Str, Reading.Vocabulary), names : Set(Str), passage_lemmas : Dict(Str, Set(Str)) }
 
 	LemmaIndex : [IndexNotLoaded, IndexLoading, IndexLoaded(LemmaData), IndexFailed]
 
@@ -348,9 +348,16 @@ Model := [].{
 		"${date.day.to_str()} ${month_name(date.month)} ${date.year.to_str()}"
 	}
 
-	## Which lemmas the learner knows or is learning (see Reading.statuses).
+	## Which lemmas the learner knows, has learned or is learning (see Reading.statuses), with reading as evidence.
 	known_words : Model.Model -> Dict(Str, Reading.Status)
-	known_words = |model| Reading.statuses(model.attempts, model.word_reviews, model.word_cards, model.known_marks)
+	known_words = |model| {
+		# Reading counts once the lemma index says which words each passage holds.
+		read = match model.lemma_index {
+			IndexLoaded(data) => Reading.read_events(model.attempts, data.passage_lemmas)
+			_ => []
+		}
+		Reading.statuses(model.attempts, model.word_reviews, model.word_cards, model.known_marks, read)
+	}
 
 	## Today's day number in the browser's time zone (days since 1970-01-01).
 	local_day : Model.Model -> I64

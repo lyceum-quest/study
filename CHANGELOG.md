@@ -18,6 +18,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 - A word is learned once you've given its meaning right on two different days without missing it since, and known
   once two of those right answers are at least two weeks apart. Each word's page shows where you are with it, and you
   can mark a word you already know.
+- Reading counts toward knowing a word: every word of a passage you grade, other than those you mark missed or
+  reveal, counts as a right answer that day, so common words you never trip on stop showing as words to learn. The
+  words to learn next each have a Know it button, and a work's goal page shows what both 95% and 98% would take at
+  your pace.
 
 ### Changed
 

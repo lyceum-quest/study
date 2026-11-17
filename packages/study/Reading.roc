@@ -172,8 +172,11 @@ Reading := [].{
 	## What the learner knows: a status for every lemma they have answered,
 	## reviewed or marked known (others are unseen). `marked` holds the lemmas
 	## the learner marked known, with when.
-	statuses : List(Study.Attempt), List(Words.Review), Dict(Str, Words.Card), Dict(Str, I64) -> Dict(Str, Status)
-	statuses = |attempts, reviews, cards, marked| {
+	##
+	## `read` adds reading as evidence (see `read_events`): a word understood
+	## in a graded passage counts as a right answer that day.
+	statuses : List(Study.Attempt), List(Words.Review), Dict(Str, Words.Card), Dict(Str, I64), List({ lemma : Str, at : I64 }) -> Dict(Str, Status)
+	statuses = |attempts, reviews, cards, marked, read| {
 		from_attempts = attempts.join_map(
 			|attempt| attempt.items.keep_oks(
 				|item|
@@ -188,7 +191,8 @@ Reading := [].{
 			),
 		)
 		from_reviews = reviews.map(|review| { lemma: review.lemma, at: review.at, right: review.rating != Again })
-		events = from_attempts.concat(from_reviews).fold(Dict.empty(), |acc, event| acc.insert(event.lemma, (acc.get(event.lemma) ?? []).append({ at: event.at, right: event.right })))
+		from_reading = read.map(|event| { lemma: event.lemma, at: event.at, right: Bool.True })
+		events = from_attempts.concat(from_reviews).concat(from_reading).fold(Dict.empty(), |acc, event| acc.insert(event.lemma, (acc.get(event.lemma) ?? []).append({ at: event.at, right: event.right })))
 		answered = events.map(
 			|lemma, found| {
 				ordered = found.sort_with(|a, b| compare_i64(a.at, b.at))
@@ -205,6 +209,45 @@ Reading := [].{
 		)
 		marked.to_list().fold(answered, |acc, (lemma, _)| if acc.contains(lemma) acc else acc.insert(lemma, Known))
 	}
+
+	## Reading as evidence of knowing a word: for each graded passage, a right
+	## answer on the day it was graded for every lemma in it (`lemmas`, by
+	## `passage_key`) that the learner neither marked missed nor revealed
+	## there. With glosses off an attempt records only the words that tripped
+	## the learner up, so this is the only record of the rest. It is weaker
+	## evidence than recalling a word alone (the passage helps), so review
+	## cards never use it, but for coverage it answers the right question: was
+	## the word understood in reading?
+	read_events : List(Study.Attempt), Dict(Str, Set(Str)) -> List({ lemma : Str, at : I64 })
+	read_events = |attempts, lemmas|
+		attempts.join_map(
+			|attempt| {
+				troubled = attempt.items
+					.keep_if(|item| item.kind == WordItem and (item.mark == Some(Bool.False) or item.revealed_early))
+					.map(|item| item.lemma)
+				in_passage = lemmas.get(passage_key(attempt.work, attempt.passage)) ?? Set.empty()
+				in_passage.to_list().drop_if(|lemma| troubled.contains(lemma)).map(|lemma| { lemma, at: attempt.finished_at })
+			},
+		)
+
+	## The key of a work's passage in `read_events`' lemmas.
+	passage_key : Str, Str -> Str
+	passage_key = |work, passage| "${work} ${passage}"
+
+	## The lemmas of each passage, by `passage_key`.
+	passage_lemmas : List((Str, List({ work : Str, ref : Str }))) -> Dict(Str, Set(Str))
+	passage_lemmas = |lemmas|
+		lemmas.fold(
+			Dict.empty(),
+			|acc, (lemma, found)|
+				found.fold(
+					acc,
+					|inner, occurrence| {
+						key = passage_key(occurrence.work, occurrence.ref)
+						inner.insert(key, (inner.get(key) ?? Set.empty()).insert(lemma))
+					},
+				),
+		)
 
 	## How a work stands: its running words, how many the learner knows (names
 	## count as known) and has learned, how many lemmas are still to learn

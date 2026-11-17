@@ -6,6 +6,7 @@ import study.Route
 import Model
 import Nav
 import Page
+import Update
 
 ## A work's reading goal: how much of it the learner can read now, the
 ## coverage to aim for (explained), a two-way calculator between words a day
@@ -58,7 +59,11 @@ GoalData : {
 	date : Str,
 	by_date : Str,
 	next : List(NextRow),
+	thresholds : List(Threshold),
 }
+
+## What a coverage level takes: 95% (reading with help) and 98% (reading on your own).
+Threshold : { goal : Str, text : Str }
 
 NextRow : { lemma : Str, name : Str, href : Str, count : Str, status : Str }
 
@@ -126,6 +131,7 @@ goal_data = |model| {
 					"Learn about ${Model.counted(per, "new word", "new words")} a day to have learned them by ${Model.format_day(day)}. They count as known about two weeks later."
 				}
 		},
+		thresholds: [95, 98].map(|level| threshold(vocabulary, known, level, per_day)),
 		next: Reading.next_words(vocabulary, known, 12).map(
 			|entry| {
 				lemma: entry.lemma,
@@ -167,6 +173,7 @@ plan = |session, data| {
 					),
 					Html.p_s(data.map(|d| d.coverage), [Engine.class("goal-note")]),
 					Html.p_s(data.map(|d| d.needed), [Engine.class("goal-needed"), Engine.test_id("goal-needed")]),
+					Engine.element("ul", [Engine.class("goal-thresholds")], [Engine.each(data.map(|d| d.thresholds), |level| level.goal, threshold_row)]),
 				],
 			),
 			Engine.element(
@@ -250,8 +257,8 @@ plan = |session, data| {
 					[Engine.class("word-section")],
 					[
 						Engine.element("h2", [], [Engine.text("Words to learn next")]),
-						Html.p("Its most frequent words you don't know yet, with how often each occurs.", "muted"),
-						Engine.element("ol", [Engine.class("goal-words")], [Engine.each(data.map(|d| d.next), |word| word.lemma, next_row)]),
+						Html.p("Its most frequent words you haven't learned yet, with how often each occurs. Already know one? Mark it, and it counts as known.", "muted"),
+						Engine.element("ol", [Engine.class("goal-words")], [Engine.each(data.map(|d| d.next), |word| word.lemma, |row| next_row(session, row))]),
 					],
 				),
 				|| Engine.text(""),
@@ -260,8 +267,8 @@ plan = |session, data| {
 	)
 }
 
-next_row : RowRef(ctx, NextRow) -> Elem(Row(ctx, NextRow))
-next_row = |row|
+next_row : State(Page.S, Model.Model), RowRef(In(Page.S, GoalData), NextRow) -> Elem(Row(In(Page.S, GoalData), NextRow))
+next_row = |session, row|
 	Engine.element(
 		"li",
 		[],
@@ -269,6 +276,11 @@ next_row = |row|
 			Engine.element("a", [Engine.attr_s("href", row.field(|word| word.href)), Engine.attr("lang", "grc")], [Engine.text_s(row.field(|word| word.name))]),
 			Html.span_s(row.field(|word| word.count), [Engine.class("goal-count")]),
 			Html.span_s(row.field(|word| word.status), [Engine.class("goal-status")]),
+			Html.button(
+				"Know it",
+				[Engine.class("text-button goal-know"), Engine.attr("type", "button"), Engine.test_id_s(row.key().map(|lemma| "know-${lemma}")), Html.aria_label_s(row.field(|word| "I already know ${word.name}"))],
+				session.lift().lift_row().update_by(row.key(), |m, lemma| Update.step(m, |x| Nav.set_known(x, lemma, Bool.True))),
+			),
 		],
 	)
 
@@ -303,3 +315,20 @@ set_date = |model, value| {
 		Err(_) => if value == "" Nav.set_reading_goals(model, { ..goals, dates: goals.dates.remove(work) }) else model
 	}
 }
+
+## `98% (on your own): 712 words to learn, about 48 days at 15 a day`.
+threshold : Reading.Vocabulary, Dict(Str, Reading.Status), U64, U64 -> Threshold
+threshold = |vocabulary, known, level, per_day| {
+	standing = Reading.standing(vocabulary, known, level)
+	name = if level >= 98 "on your own" else "with help"
+	rest =
+		if standing.needed == 0 {
+			"enough words learned"
+		} else {
+			"${Model.counted(standing.needed, "word", "words")} to learn, about ${Reading.duration(Reading.days_to(standing.needed, per_day))} at ${per_day.to_str()} a day"
+		}
+	{ goal: level.to_str(), text: "${level.to_str()}% (${name}): ${rest}" }
+}
+
+threshold_row : RowRef(ctx, Threshold) -> Elem(Row(ctx, Threshold))
+threshold_row = |row| Engine.element("li", [Engine.test_id_s(row.key().map(|level| "goal-at-${level}"))], [Engine.text_s(row.field(|level| level.text))])
