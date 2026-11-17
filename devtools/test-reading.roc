@@ -2,7 +2,7 @@ app [main!] {
 	fsrs: "../packages/fsrs/main.roc",
 	json: "../packages/json/main.roc",
 	study: "../packages/study/main.roc",
-	pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.28.0/2yhxoR7cZPSYbyUzPWULFw8AA6QEcdsgFNRmzu7pZbst.tar.zst",
+	pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.28.1/7brgwR8YUqfeGrkdfF1V4GPPN7DnP7ftqub9KcrTEZtr.tar.zst",
 }
 
 import pf.Stdout
@@ -91,17 +91,18 @@ name_checks = [
 coverage_checks : List(Check)
 coverage_checks = {
 	none = Dict.empty()
-	some = Dict.empty().insert("καί", Known).insert("λόγος", Learning)
+	some = Dict.empty().insert("καί", Known).insert("λόγος", Learned)
 	[
 		check("luke tokens", (luke.tokens, luke.name_tokens), (12, 2)),
 		check("luke lemmas by frequency", luke.lemmas, [{ lemma: "καί", count: 4 }, { lemma: "λόγος", count: 2 }, { lemma: "ἅγιος", count: 2 }, { lemma: "θεός", count: 1 }, { lemma: "ἀρχή", count: 1 }]),
 		# Names cover 2/12; reaching 95% (11.4 of 12) takes all but one.
-		check("standing knowing nothing", Reading.standing(luke, none, 95), { tokens: 12, known_tokens: 2, unknown: 5, needed: 5 }),
-		check("standing knowing καί", Reading.standing(luke, some, 50), { tokens: 12, known_tokens: 6, unknown: 4, needed: 0 }),
-		check("standing knowing καί, 90%", Reading.standing(luke, some, 90), { tokens: 12, known_tokens: 6, unknown: 4, needed: 3 }),
-		check("percent rounds down", Reading.percent({ tokens: 12, known_tokens: 11, unknown: 1, needed: 0 }), 91),
-		check("percent of nothing", Reading.percent({ tokens: 0, known_tokens: 0, unknown: 0, needed: 0 }), 100),
-		check("next words", Reading.next_words(luke, some, 2), [{ lemma: "λόγος", count: 2, status: Learning }, { lemma: "ἅγιος", count: 2, status: Unseen }]),
+		check("standing knowing nothing", Reading.standing(luke, none, 95), { tokens: 12, known_tokens: 2, learned_tokens: 2, unknown: 5, needed: 5 }),
+		check("standing knowing καί, λόγος learned", Reading.standing(luke, some, 50), { tokens: 12, known_tokens: 6, learned_tokens: 8, unknown: 3, needed: 0 }),
+		check("standing knowing καί, λόγος learned, 90%", Reading.standing(luke, some, 90), { tokens: 12, known_tokens: 6, learned_tokens: 8, unknown: 3, needed: 2 }),
+		check("percent rounds down", Reading.percent({ tokens: 12, known_tokens: 11, learned_tokens: 11, unknown: 1, needed: 0 }), 91),
+		check("learned percent", Reading.learned_percent({ tokens: 12, known_tokens: 6, learned_tokens: 8, unknown: 3, needed: 0 }), 66),
+		check("percent of nothing", Reading.percent({ tokens: 0, known_tokens: 0, learned_tokens: 0, unknown: 0, needed: 0 }), 100),
+		check("next words", Reading.next_words(luke, some.insert("ἀρχή", Learning), 3), [{ lemma: "ἅγιος", count: 2, status: Unseen }, { lemma: "θεός", count: 1, status: Unseen }, { lemma: "ἀρχή", count: 1, status: Learning }]),
 	]
 }
 
@@ -132,10 +133,10 @@ attempt = |finished_at, items| {
 
 attempts : List(Study.Attempt)
 attempts = [
-	# καί: right on two days 21 days apart: known.
+	# καί: right on two days 21 days apart: known (two weeks is enough).
 	attempt(t0, [item("καί", Some(Bool.True), Bool.False), item("λόγος", Some(Bool.True), Bool.False), item("θεός", Some(Bool.True), Bool.False), item("ἀρχή", Some(Bool.True), Bool.True)]),
-	# λόγος: right twice but only 20 days apart: learning.
-	attempt(t0 + 20 * day, [item("λόγος", Some(Bool.True), Bool.False)]),
+	# λόγος: right on two days only 10 apart: learned, not yet known.
+	attempt(t0 + 10 * day, [item("λόγος", Some(Bool.True), Bool.False)]),
 	attempt(t0 + 21 * day, [item("καί", Some(Bool.True), Bool.False), item("θεός", Some(Bool.True), Bool.False)]),
 	# θεός: then missed: learning.
 	attempt(t0 + 22 * day, [item("θεός", Some(Bool.False), Bool.False), item("ἀρχή", Some(Bool.True), Bool.True)]),
@@ -156,15 +157,15 @@ known_checks = {
 	marked = statuses(Dict.empty().insert("λόγος", t0 + day).insert("θεός", t0).insert("ἰησοῦς", t0))
 	[
 		check("καί known", plain.get("καί"), Ok(Known)),
-		check("λόγος 20 days apart", plain.get("λόγος"), Ok(Learning)),
+		check("λόγος 10 days apart", plain.get("λόγος"), Ok(Learned)),
 		check("θεός missed last", plain.get("θεός"), Ok(Learning)),
 		check("ἀρχή one day", plain.get("ἀρχή"), Ok(Learning)),
 		check("unseen", plain.get("ἅγιος").is_ok(), Bool.False),
 		check("marked known", marked.get("λόγος"), Ok(Known)),
 		check("marked, then missed", marked.get("θεός"), Ok(Learning)),
 		check("marked, never answered", marked.get("ἰησοῦς"), Ok(Known)),
-		# A word review card not yet stable for three weeks holds the word back.
-		check("unstable card", Reading.statuses(attempts, [], unstable, Dict.empty()).get("καί"), Ok(Learning)),
+		# A word review card not yet stable for two weeks holds the word at learned.
+		check("unstable card", Reading.statuses(attempts, [], unstable, Dict.empty()).get("καί"), Ok(Learned)),
 	]
 }
 
@@ -174,10 +175,10 @@ pace_checks = {
 	[
 		# 3 lemmas first right within the 28 days before day 30 (καί, λόγος and θεός came on day 0, ἀρχή on day 30).
 		check("pace", Reading.pace(now, attempts, []), Some(1)),
-		check("pace too early", Reading.pace(t0 + 3 * day, attempts, []), None),
+		check("pace too early", Reading.pace(t0 + 2 * day, attempts, []), None),
 		check("pace with reviews", Reading.pace(now, attempts, List.repeat(0, 56).map_with_index(|_, n| { lemma: "l${n.to_str()}", at: now - day, rating: Good, occurrence: { work: "luke", passage: "1.1", position: 1, form: "f", gloss: "g", text: "t", guess: "g" } })), Some(2)),
-		check("days to, with three weeks to settle", (Reading.days_to(100, 15), Reading.days_to(0, 15), Reading.days_to(30, 15)), (28, 0, 23)),
-		check("per day for", (Reading.per_day_for(100, 28), Reading.per_day_for(100, 0), Reading.per_day_for(0, 5)), (15, 100, 0)),
+		check("days to learn", (Reading.days_to(100, 15), Reading.days_to(0, 15), Reading.days_to(354, 50), Reading.days_to(354, 100), Reading.days_to(354, 354)), (7, 0, 8, 4, 1)),
+		check("per day for", (Reading.per_day_for(100, 28), Reading.per_day_for(100, 0), Reading.per_day_for(0, 5)), (4, 100, 0)),
 		check("durations", [0, 1, 5, 20, 90, 400, 900].map(Reading.duration), ["now", "1 day", "5 days", "3 weeks", "3 months", "13 months", "2.5 years"]),
 	]
 }

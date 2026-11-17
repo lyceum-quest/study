@@ -470,8 +470,9 @@ word_status : Model.Model, Str -> Str
 word_status = |model, lemma| {
 	marked = model.known_marks.contains(lemma)
 	match Model.known_words(model).get(lemma) {
-		Ok(Known) => if marked "Known: you marked it." else "Known: recalled right on days three weeks apart."
-		Ok(Learning) => "Learning: known once recalled right on days three weeks apart."
+		Ok(Known) => if marked "Known: you marked it." else "Known: recalled right on days two weeks apart."
+		Ok(Learned) => "Learned: right on two days. Known once two right answers are two weeks apart."
+		Ok(Learning) => "Learning: learned once you get it right on two different days."
 		Err(_) => "New to you."
 	}
 }

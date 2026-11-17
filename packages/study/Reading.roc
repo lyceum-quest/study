@@ -13,12 +13,18 @@ import Words
 ##
 ## A lemma is known when the learner has shown durable, unassisted recall of
 ## its meaning (see `statuses`): right on at least two separate days at least
-## 21 days apart, never missed since, and, if it ever needed a word review
-## card, with that card's FSRS stability at 21 days or more (recall still
-## expected 90% of the time three weeks out). The rule follows the research
-## on successive relearning (correct recalls in spaced sessions, not repeated
-## recalls in one), the spacing effect, and Anki's "mature" convention.
-## Learners can also mark a lemma known themselves; a later miss undoes that.
+## two weeks (`settle_days`) apart, never missed since, and, if it ever needed
+## a word review card, with that card's FSRS stability at two weeks or more
+## (recall still expected 90% of the time two weeks out). The rule follows the
+## research on successive relearning (correct recalls in spaced sessions, not
+## repeated recalls in one) and the spacing effect: recall a few days after
+## learning overstates what lasts. Learners can also mark a lemma known
+## themselves; a later miss undoes that.
+##
+## Before that, a lemma right on two separate days and not missed since is
+## learned: the learner has done their part, and it counts as known once two
+## weeks separate its right answers. Plans count the days to learn the words
+## a goal needs, and the words count as known `settle_days` later.
 ##
 ## Proper names need no learning and count as known. The corpus does not tag
 ## them, so a lemma is taken as a name when every occurrence is capitalized in
@@ -28,15 +34,17 @@ Reading := [].{
 	## One occurrence of a lemma in the library (`preload/lemmas.json`).
 	Occurrence : { work : Str, position : I64, form : Str }
 
-	Status : [Known, Learning]
+	Status : [Known, Learned, Learning]
 
 	## A work's vocabulary: its running words (tokens) and how often each
 	## lemma that needs learning occurs, most frequent first; names are only
 	## counted in `name_tokens`.
 	Vocabulary : { tokens : U64, name_tokens : U64, lemmas : List({ lemma : Str, count : U64 }) }
 
-	## Where a work stands for a learner.
-	Standing : { tokens : U64, known_tokens : U64, unknown : U64, needed : U64 }
+	## Where a work stands for a learner: its running words, those whose lemma
+	## is known (names count), those known or learned, how many of its lemmas
+	## are still to learn, and how many of those reach the goal.
+	Standing : { tokens : U64, known_tokens : U64, learned_tokens : U64, unknown : U64, needed : U64 }
 
 	## The learner's reading goals, synced as the `reading-goals` setting: the
 	## coverage to aim for, the words a day to plan with (0: their own pace),
@@ -48,12 +56,12 @@ Reading := [].{
 
 	## `{"coverage": 95, "perDay": 0, "targets": {"luke": "2027-03-01"}}`.
 	encode_goals : Goals -> JsonValue
-	encode_goals = |goals|
+	encode_goals = |plan|
 		JsonValue.object(
 			[
-				("coverage", JsonValue.int(goals.coverage.to_i64_wrap())),
-				("perDay", JsonValue.int(goals.per_day.to_i64_wrap())),
-				("targets", JsonValue.object(goals.dates.to_list().map(|(work, date)| (work, JsonValue.str(date))))),
+				("coverage", JsonValue.int(plan.coverage.to_i64_wrap())),
+				("perDay", JsonValue.int(plan.per_day.to_i64_wrap())),
+				("targets", JsonValue.object(plan.dates.to_list().map(|(work, date)| (work, JsonValue.str(date))))),
 			],
 		)
 
@@ -186,37 +194,51 @@ Reading := [].{
 				ordered = found.sort_with(|a, b| compare_i64(a.at, b.at))
 				mark_at = marked.get(lemma) ?? -1
 				missed_after_mark = mark_at >= 0 and ordered.any(|event| !event.right and event.at > mark_at)
-				if (mark_at >= 0 and !missed_after_mark) or durable(ordered, cards.get(lemma)) Known else Learning
+				if (mark_at >= 0 and !missed_after_mark) or durable(ordered, cards.get(lemma)) {
+					Known
+				} else if learned(ordered) {
+					Learned
+				} else {
+					Learning
+				}
 			},
 		)
 		marked.to_list().fold(answered, |acc, (lemma, _)| if acc.contains(lemma) acc else acc.insert(lemma, Known))
 	}
 
 	## How a work stands: its running words, how many the learner knows (names
-	## count as known), how many lemmas they don't know, and how many of those,
-	## most frequent first, reach `goal` percent coverage.
+	## count as known) and has learned, how many lemmas are still to learn
+	## (neither known nor learned), and how many of those, most frequent first,
+	## bring known and learned words to `goal` percent coverage.
 	standing : Vocabulary, Dict(Str, Status), U64 -> Standing
 	standing = |vocabulary, known, goal| {
+		tokens_of = |entries| entries.fold(0, |sum, entry| sum + entry.count)
 		is_known = |lemma| known.get(lemma) == Ok(Known)
-		known_tokens = vocabulary.name_tokens + vocabulary.lemmas.keep_if(|entry| is_known(entry.lemma)).fold(0, |sum, entry| sum + entry.count)
-		unknown = vocabulary.lemmas.drop_if(|entry| is_known(entry.lemma))
-		# Coverage reaches the goal once known * 100 >= goal * tokens.
+		is_learned = |lemma| known.get(lemma) == Ok(Learned)
+		known_tokens = vocabulary.name_tokens + tokens_of(vocabulary.lemmas.keep_if(|entry| is_known(entry.lemma)))
+		learned_tokens = known_tokens + tokens_of(vocabulary.lemmas.keep_if(|entry| is_learned(entry.lemma)))
+		unknown = vocabulary.lemmas.drop_if(|entry| is_known(entry.lemma) or is_learned(entry.lemma))
+		# Coverage reaches the goal once covered * 100 >= goal * tokens.
 		target = goal * vocabulary.tokens
 		needed = unknown
 			.fold(
-				{ covered: known_tokens * 100, count: 0 },
+				{ covered: learned_tokens * 100, count: 0 },
 				|acc, entry| if acc.covered >= target acc else { covered: acc.covered + entry.count * 100, count: acc.count + 1 },
 			)
 			.count
-		{ tokens: vocabulary.tokens, known_tokens, unknown: unknown.len(), needed }
+		{ tokens: vocabulary.tokens, known_tokens, learned_tokens, unknown: unknown.len(), needed }
 	}
 
-	## Coverage in whole percent, rounded down (so 94.9% never shows as 95%).
+	## Known coverage in whole percent, rounded down (so 94.9% never shows as 95%).
 	percent : Standing -> U64
 	percent = |found| if found.tokens == 0 100 else found.known_tokens * 100 // found.tokens
 
+	## Coverage by known and learned words, in whole percent, rounded down.
+	learned_percent : Standing -> U64
+	learned_percent = |found| if found.tokens == 0 100 else found.learned_tokens * 100 // found.tokens
+
 	## The learner's pace in new words a day: lemmas first answered right in
-	## the last 28 days, once they have been studying for at least a week.
+	## the last 28 days, once they have been studying for at least three days.
 	pace : I64, List(Study.Attempt), List(Words.Review) -> [Some(U64), None]
 	pace = |now, attempts, reviews| {
 		window = 28 * day_ms
@@ -226,7 +248,7 @@ Reading := [].{
 			.fold(Dict.empty(), |acc, (lemma, at)| if (acc.get(lemma) ?? at) <= at and acc.contains(lemma) acc else acc.insert(lemma, at))
 		earliest = attempts.map(|attempt| attempt.finished_at).concat(reviews.map(|review| review.at)).min() ?? now
 		recent = firsts.to_list().count_if(|(_, at)| at > now - window)
-		if now - earliest < 7 * day_ms {
+		if now - earliest < pace_days.to_i64_wrap() * day_ms {
 			None
 		} else {
 			# The window, or the time since the learner began if shorter.
@@ -235,31 +257,31 @@ Reading := [].{
 		}
 	}
 
-	## Days until `needed` new lemmas are known at `per_day` a day: the days
-	## introducing them, then `settle_days` for the last ones to pass the
-	## three-week test of a known word.
+	## The study the learner needs before their own pace replaces `default_pace`.
+	pace_days : U64
+	pace_days = 3
+
+	## Days to learn `needed` new lemmas at `per_day` a day (rounded up). They
+	## count as known `settle_days` after the last is learned.
 	days_to : U64, U64 -> U64
-	days_to = |needed, per_day| if needed == 0 0 else if per_day == 0 0 else (needed + per_day - 1) // per_day + settle_days
+	days_to = |needed, per_day| if per_day == 0 0 else (needed + per_day - 1) // per_day
 
-	## Words a day to know `needed` lemmas `days` days from now (rounded up);
-	## the last `settle_days` are for the newest words to settle.
+	## Words a day to learn `needed` lemmas in `days` days (rounded up).
 	per_day_for : U64, U64 -> U64
-	per_day_for = |needed, days| {
-		learning = if days > settle_days days - settle_days else 1
-		if needed == 0 0 else (needed + learning - 1) // learning
-	}
+	per_day_for = |needed, days| if days == 0 needed else (needed + days - 1) // days
 
-	## How long a newly learned word takes to count as known.
+	## How long a learned word takes to count as known: the gap between two
+	## right answers that shows recall lasts.
 	settle_days : U64
-	settle_days = 21
+	settle_days = 14
 
-	## The `count` most frequent lemmas of a work the learner doesn't know yet.
+	## The `count` most frequent lemmas of a work the learner still has to learn.
 	next_words : Vocabulary, Dict(Str, Status), U64 -> List({ lemma : Str, count : U64, status : [Learning, Unseen] })
 	next_words = |vocabulary, known, count|
 		vocabulary.lemmas
 			.keep_oks(
 				|entry| match known.get(entry.lemma) {
-					Ok(Known) => Err({})
+					Ok(Known) | Ok(Learned) => Err({})
 					Ok(Learning) => Ok({ lemma: entry.lemma, count: entry.count, status: Learning })
 					Err(_) => Ok({ lemma: entry.lemma, count: entry.count, status: Unseen })
 				},
@@ -285,25 +307,31 @@ Reading := [].{
 day_ms : I64
 day_ms = 86400000
 
-## Right on two separate days at least 21 days apart, last answered right,
-## and any word review card stable for three weeks.
+## Learned, with right answers `settle_days` apart, and any word review card
+## stable for as long.
 durable : List({ at : I64, right : Bool }), Try(Words.Card, _) -> Bool
 durable = |ordered, card| {
 	rights = ordered.keep_if(|event| event.right)
-	last_right = match ordered.last() {
-		Ok(event) => event.right
-		Err(_) => Bool.False
-	}
-	days = rights.map(|event| event.at // day_ms).fold(Set.empty(), |set, day| set.insert(day))
 	span = match (rights.first(), rights.last()) {
 		(Ok(first), Ok(last)) => last.at - first.at
 		_ => 0
 	}
 	stable = match card {
-		Ok(found) => found.card.stability >= 21.0
+		Ok(found) => found.card.stability >= Reading.settle_days.to_f64()
 		Err(_) => Bool.True
 	}
-	last_right and days.len() >= 2 and span >= 21 * day_ms and stable
+	learned(ordered) and span >= Reading.settle_days.to_i64_wrap() * day_ms and stable
+}
+
+## Right on at least two separate days, and last answered right.
+learned : List({ at : I64, right : Bool }) -> Bool
+learned = |ordered| {
+	last_right = match ordered.last() {
+		Ok(event) => event.right
+		Err(_) => Bool.False
+	}
+	days = ordered.keep_if(|event| event.right).map(|event| event.at // day_ms).fold(Set.empty(), |set, day| set.insert(day))
+	last_right and days.len() >= 2
 }
 
 by_frequency : { lemma : Str, count : U64 }, { lemma : Str, count : U64 } -> [Before, Same, After]

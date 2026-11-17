@@ -329,14 +329,14 @@ rows = |model, works| {
 	works.map_with_index(|work, index| work_row(model, found, work, index))
 }
 
-## `62% of words known · 340 to learn for 95%`.
+## `4% known · 9% learned · 340 words to learn for 95%`.
 reading_line : Model.Model, Dict(Str, Reading.Standing), Str -> Str
 reading_line = |model, found, work|
 	match found.get(work) {
 		Ok(standing) => {
 			goal = model.reading_goals.coverage.to_str()
 			learn = if standing.needed == 0 "at your ${goal}% goal" else "${Model.counted(standing.needed, "word", "words")} to learn for ${goal}%"
-			"${Reading.percent(standing).to_str()}% of words known · ${learn}"
+			"${Reading.percent(standing).to_str()}% known · ${Reading.learned_percent(standing).to_str()}% learned · ${learn}"
 		}
 		Err(_) => ""
 	}
@@ -500,7 +500,7 @@ goal_lines = |model| {
 					goal = "${model.reading_goals.coverage.to_str()}%"
 					text =
 						if standing.needed == 0 {
-							"${goal} of the words known. Ready to read."
+							"Enough of its words learned for ${goal}."
 						} else if day <= today {
 							"${Model.counted(standing.needed, "word", "words")} to go for ${goal}; the target date has passed."
 						} else {

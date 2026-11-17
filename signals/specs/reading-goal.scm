@@ -12,8 +12,8 @@
     (change (test-id "store") "{\"id\":\"progress:8\",\"ok\":true,\"value\":[{\"id\":\"attempt:demo:1.1:1760313600000\",\"type\":\"attempt\",\"work\":\"demo\",\"passage\":\"1.1\",\"sentenceId\":\"1.1\",\"sentenceText\":\"λόγος , ἦν\",\"startedAt\":1760313500000,\"finishedAt\":1760313600000,\"items\":[{\"key\":\"w:1\",\"kind\":\"word\",\"form\":\"λόγος\",\"lemma\":\"λόγος\",\"guess\":\"word\",\"reference\":\"word\",\"revealedEarly\":false,\"mark\":true}],\"rating\":\"good\"},{\"id\":\"attempt:demo:1.1:1762819200000\",\"type\":\"attempt\",\"work\":\"demo\",\"passage\":\"1.1\",\"sentenceId\":\"1.1\",\"sentenceText\":\"λόγος , ἦν\",\"startedAt\":1762819100000,\"finishedAt\":1762819200000,\"items\":[{\"key\":\"w:1\",\"kind\":\"word\",\"form\":\"λόγος\",\"lemma\":\"λόγος\",\"guess\":\"word\",\"reference\":\"word\",\"revealedEarly\":false,\"mark\":true}],\"rating\":\"good\"}],\"now\":1762905600000}")
 
     ; Each row says how much of the work the learner can read, and what the goal takes.
-    (expect-text (test-id "library:demo:reading") "25% of words known · 1 word to learn for 95%")
-    (expect-text (test-id "library:other:reading") "75% of words known · 1 word to learn for 95%")
+    (expect-text (test-id "library:demo:reading") "25% known · 25% learned · 1 word to learn for 95%")
+    (expect-text (test-id "library:other:reading") "75% known · 75% learned · 1 word to learn for 95%")
     (expect-text (test-id "library-1") "Demo Work")
     (select-option (label "Sort the library") "easiest")
     (expect-text (test-id "library-1") "Other Work")
@@ -24,18 +24,20 @@
     (expect-current-location "/signals/#/demo/goal")
     (expect-text (role heading :name "Demo Work") "Demo Work")
     (expect-text (test-id "goal-percent") "25%")
-    (expect-text (test-id "goal-needed") "Learn its 1 most frequent word you don't know yet to reach 95%.")
-    (expect-text (test-id "goal-finish") "You'd know 95% of its words in about 3 weeks, around 4 Dec 2025.")
+    (expect-text (test-id "goal-needed") "Learn its 1 most frequent word you haven't learned yet to reach 95%.")
+    (expect-text (test-id "goal-finish") "You'd learn them in 1 day, by 13 Nov 2025.")
+    (expect-text (test-id "goal-known-by") "They count as known once you've recalled each one right two weeks after first getting it: around 27 Nov 2025.")
+    (expect-text (test-id "goal-learned") "25%")
     (expect-text (role link :name "εἰμί") "εἰμί")
 
     ; Planning by words a day, then by a date; both are saved.
     (fill (label "New words a day") "20")
-    (expect-text (test-id "goal-finish") "You'd know 95% of its words in about 3 weeks, around 4 Dec 2025.")
+    (expect-text (test-id "goal-finish") "You'd learn them in 1 day, by 13 Nov 2025.")
     (expect-text (role button :name "Use my pace") "Use my pace")
     (change (label "Target date") "2025-12-31")
-    (expect-text (test-id "goal-by-date") "Learn about 1 new word a day to get there by 31 Dec 2025.")
+    (expect-text (test-id "goal-by-date") "Learn about 1 new word a day to have learned them by 31 Dec 2025. They count as known about two weeks later.")
     (select-option (label "Coverage goal") "98")
-    (expect-text (test-id "goal-needed") "Learn its 1 most frequent word you don't know yet to reach 98%.")
+    (expect-text (test-id "goal-needed") "Learn its 1 most frequent word you haven't learned yet to reach 98%.")
     (expect-attr (test-id "store") "data-request" "[{\"id\":\"save:12\",\"operation\":\"put\",\"store\":\"metadata\",\"value\":{\"key\":\"reading-goals\",\"value\":{\"coverage\":98,\"perDay\":20,\"targets\":{\"demo\":\"2025-12-31\"}}}}]")
 
     ; The Today panel keeps the dated goal in view.

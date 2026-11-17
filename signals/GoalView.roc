@@ -45,6 +45,8 @@ GoalView := [].{
 GoalData : {
 	percent : Str,
 	width : Str,
+	learned : Str,
+	learned_width : Str,
 	coverage : Str,
 	needed : Str,
 	goal : Str,
@@ -52,6 +54,7 @@ GoalData : {
 	pace : Str,
 	uses_pace : Bool,
 	finish : Str,
+	known_by : Str,
 	date : Str,
 	by_date : Str,
 	next : List(NextRow),
@@ -82,28 +85,30 @@ goal_data = |model| {
 	goal = model.reading_goals.coverage
 	standing = Reading.standing(vocabulary, known, goal)
 	percent = Reading.percent(standing)
+	learned = Reading.learned_percent(standing)
 	per_day = Model.plan_pace(model)
 	measured = Reading.pace(model.clock, model.attempts, model.word_reviews)
 	today = Model.local_day(model)
 	days = Reading.days_to(standing.needed, per_day)
+	learned_by = today + days.to_i64_wrap()
+	settle = Reading.settle_days.to_i64_wrap()
 	date = model.reading_goals.dates.get(work) ?? ""
 	{
 		percent: "${percent.to_str()}%",
 		width: "${percent.to_str()}%",
-		coverage: "You know ${standing.known_tokens.to_str()} of its ${standing.tokens.to_str()} running words, counting names. ${Model.counted(standing.unknown, "word", "words")} in it are new to you or still being learned.",
-		needed: if standing.needed == 0 "You already know ${goal.to_str()}% of its words." else "Learn its ${Model.counted(standing.needed, "most frequent word", "most frequent words")} you don't know yet to reach ${goal.to_str()}%.",
+		learned: "${learned.to_str()}%",
+		learned_width: "${learned.to_str()}%",
+		coverage: "You know ${standing.known_tokens.to_str()} of its ${standing.tokens.to_str()} running words, counting names, and have learned the words of ${(standing.learned_tokens - standing.known_tokens).to_str()} more. ${Model.counted(standing.unknown, "word", "words")} in it are still to learn.",
+		needed: if standing.needed == 0 "You've learned enough of its words for ${goal.to_str()}%." else "Learn its ${Model.counted(standing.needed, "most frequent word", "most frequent words")} you haven't learned yet to reach ${goal.to_str()}%.",
 		goal: goal.to_str(),
 		per_day: per_day.to_str(),
 		pace: match measured {
 			Some(n) => "Your pace over the last four weeks: ${Model.counted(n, "new word", "new words")} a day."
-			None => "Until you have a week of study, plans assume ${Reading.default_pace.to_str()} new words a day."
+			None => "Until you have ${Reading.pace_days.to_str()} days of study, plans assume ${Reading.default_pace.to_str()} new words a day."
 		},
 		uses_pace: model.reading_goals.per_day == 0,
-		finish: if standing.needed == 0 {
-			"Nothing left to learn for this goal."
-		} else {
-			"You'd know ${goal.to_str()}% of its words in about ${Reading.duration(days)}, around ${Model.format_day(today + days.to_i64_wrap())}."
-		},
+		finish: if standing.needed == 0 "Nothing left to learn for this goal." else "You'd learn them in ${Reading.duration(days)}, by ${Model.format_day(learned_by)}.",
+		known_by: if standing.needed == 0 "" else "They count as known once you've recalled each one right two weeks after first getting it: around ${Model.format_day(learned_by + settle)}.",
 		date,
 		by_date: match Reading.day_of_date(date) {
 			Err(_) => "Pick a date to see the words a day it takes."
@@ -113,9 +118,8 @@ goal_data = |model| {
 				} else if standing.needed == 0 {
 					"You're there already."
 				} else {
-					left = (day - today).to_u64_wrap()
-					tight = if left <= Reading.settle_days " Words learned in the last three weeks won't count as known by then, so this is a stretch." else ""
-					"Learn about ${Model.counted(Reading.per_day_for(standing.needed, left), "new word", "new words")} a day to get there by ${Model.format_day(day)}.${tight}"
+					per = Reading.per_day_for(standing.needed, (day - today).to_u64_wrap())
+					"Learn about ${Model.counted(per, "new word", "new words")} a day to have learned them by ${Model.format_day(day)}. They count as known about two weeks later."
 				}
 		},
 		next: Reading.next_words(vocabulary, known, 12).map(
@@ -143,13 +147,16 @@ plan = |session, data| {
 						"goal-coverage-head",
 						[
 							Html.span_s(data.map(|d| d.percent), [Engine.class("goal-percent"), Engine.test_id("goal-percent")]),
-							Engine.element("span", [Engine.class("muted")], [Engine.text("of the words known")]),
+							Engine.element("span", [Engine.class("muted")], [Engine.text("of the words known ·")]),
+							Html.span_s(data.map(|d| d.learned), [Engine.class("goal-learned"), Engine.test_id("goal-learned")]),
+							Engine.element("span", [Engine.class("muted")], [Engine.text("learned")]),
 						],
 					),
 					Engine.element(
 						"span",
-						[Engine.class("progress-track goal-track"), Engine.attr("role", "img"), Engine.attr_s("aria-label", data.map(|d| "${d.percent} of the words known, goal ${d.goal}%"))],
+						[Engine.class("progress-track goal-track"), Engine.attr("role", "img"), Engine.attr_s("aria-label", data.map(|d| "${d.percent} of the words known, ${d.learned} learned, goal ${d.goal}%"))],
 						[
+							Engine.element("span", [Engine.class("goal-learned-fill"), Engine.attr_s("style", data.map(|d| "width: ${d.learned_width}"))], []),
 							Engine.element("span", [Engine.class("progress-fill"), Engine.attr_s("style", data.map(|d| "width: ${d.width}"))], []),
 							Engine.element("span", [Engine.class("goal-marker"), Engine.attr_s("style", data.map(|d| "left: ${d.goal}%"))], []),
 						],
@@ -168,10 +175,12 @@ plan = |session, data| {
 						[Engine.class("goal-field")],
 						[
 							Engine.element("span", [], [Engine.text("Know")]),
-							Engine.element(
-								"select",
-								[Html.aria_label("Coverage goal"), Engine.attr_s("value", data.map(|d| d.goal)), Engine.on("change", Page.act_value(session, set_coverage).lift())],
-								[Html.option("90", "90%"), Html.option("95", "95%"), Html.option("98", "98%")],
+							Page.select(
+								"Coverage goal",
+								data.map(|d| d.goal),
+								Engine.const([("90", "90%"), ("95", "95%"), ("98", "98%")]),
+								[],
+								Page.chose(session, set_coverage).lift(),
 							),
 							Engine.element("span", [], [Engine.text("of the running words")]),
 						],
@@ -190,7 +199,7 @@ plan = |session, data| {
 						[Engine.class("goal-explainer")],
 						[
 							Engine.element("summary", [], [Engine.text("When a word counts as known")]),
-							Html.p("When you've given its meaning right, without revealing it, on two days at least three weeks apart, and haven't missed it since. If it has a word review card, the card has to last three weeks as well. Remembering a word over weeks, not minutes, is what lets you meet it in a new text and still know it.", ""),
+							Html.p("A word is learned once you've given its meaning right, without revealing it, on two different days, and haven't missed it since. It counts as known once two of those right answers are at least two weeks apart (and, if it has a word review card, the card lasts two weeks as well). Recall a few days after learning overstates what lasts; recall over weeks is what lets you meet a word in a new text and still know it.", ""),
 							Html.p("Already know a word? Mark it on its page. A later miss undoes the mark.", ""),
 						],
 					),
@@ -206,11 +215,12 @@ plan = |session, data| {
 						[Engine.class("goal-field")],
 						[
 							Engine.element("span", [], [Engine.text("At")]),
-							Html.number_input(Engine.const("New words a day"), data.map(|d| d.per_day), [Engine.class("goal-number"), Engine.attr("min", "1"), Engine.attr("max", "200")], Page.act_value(session, set_per_day).lift()),
+							Html.number_input(Engine.const("New words a day"), data.map(|d| d.per_day), [Engine.class("goal-number"), Engine.attr("min", "1"), Engine.attr("max", "1000")], Page.act_value(session, set_per_day).lift()),
 							Engine.element("span", [], [Engine.text("new words a day")]),
 						],
 					),
-					Html.p_s(data.map(|d| d.finish), [Engine.class("goal-result"), Engine.test_id("goal-finish")]),
+					Html.p_s(data.map(|d| d.finish), [Engine.class("goal-result goal-finish"), Engine.test_id("goal-finish")]),
+					Engine.when(data.map(|d| d.known_by != ""), || Html.p_s(data.map(|d| d.known_by), [Engine.class("goal-note goal-known-by"), Engine.test_id("goal-known-by")]), || Engine.text("")),
 					Html.div(
 						"goal-pace",
 						[
@@ -223,7 +233,7 @@ plan = |session, data| {
 						[Engine.class("goal-field")],
 						[
 							Engine.element("span", [], [Engine.text("Finish by")]),
-							Engine.element("input", [Html.aria_label("Target date"), Engine.attr("type", "date"), Engine.class("goal-date"), Engine.attr_s("value", data.map(|d| d.date)), Engine.on("change", Page.act_value(session, set_date).lift())], []),
+							Engine.element("input", [Html.aria_label("Target date"), Engine.attr("type", "date"), Engine.class("goal-date"), Engine.prop_s(Engine.Prop.value, data.map(|d| d.date)), Engine.on("change", Page.act_value(session, set_date).lift())], []),
 						],
 					),
 					Html.p_s(data.map(|d| d.by_date), [Engine.class("goal-result"), Engine.test_id("goal-by-date")]),

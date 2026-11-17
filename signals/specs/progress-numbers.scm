@@ -11,8 +11,9 @@
     (expect-document-title "Progress · Lyceum Study")
     (expect-text (role heading :name "Your progress") "Your progress")
     (expect-text (test-id "tile-Words known") "0")
-    ; λόγος, right on two days only one apart, and εἰμί, missed, are both still being learned.
-    (expect-text (test-id "tile-Words learning") "2")
+    ; λόγος, right on two days only one apart, is learned but not yet known; εἰμί, missed, is still being learned.
+    (expect-text (test-id "tile-Words learned") "1")
+    (expect-text (test-id "tile-Words learning") "1")
     (expect-text (test-id "tile-Passages studied") "1")
     (expect-text (text "of 2") "of 2")
     (expect-text (test-id "tile-Streak") "2 days")

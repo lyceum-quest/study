@@ -4900,3 +4900,32 @@ a.secondary-button {
   color: var(--muted);
   font-size: 0.92rem;
 }
+
+.goal-learned {
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-track .progress-fill,
+.goal-track .goal-learned-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.goal-track .goal-learned-fill {
+  background: var(--teal);
+  opacity: 0.35;
+}
+
+.goal-result.goal-finish {
+  margin-bottom: 4px;
+}
+
+.goal-known-by {
+  margin: 0 0 12px;
+}

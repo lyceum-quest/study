@@ -7,19 +7,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
-- Reading goals. Each work in the library shows how much of it you can read: the share of its running words you know,
-  and how many words you still need to learn to reach your goal. The goal is 95% by default, which most readers need
-  to follow a text with help; 98% means reading on your own. A work's Reading goal page explains these thresholds,
-  lets you set your goal, and works out either your finish date from the number of new words you learn a day, or the
-  words a day you need to finish by a date you pick. It also lists the most frequent words to learn next.
+- Reading goals. Each work in the library shows how much of it you can read: the share of its running words you know
+  and have learned, and how many words you still need to learn to reach your goal. The goal is 95% by default, which
+  most readers need to follow a text with help; 98% means reading on your own. A work's Reading goal page explains these thresholds,
+  lets you set your goal, and works out either when you'll have learned the words it needs from the number of new
+  words you learn a day, or the words a day you need to learn them by a date you pick. It starts from your own pace
+  after three days of study. It also lists the most frequent words to learn next.
 - "Easiest first" sorts the library by how much of each work you can read already.
 - Goals with a date appear on the Today panel.
-- A word counts as known once you've given its meaning right on two days at least three weeks apart, without
-  missing it since. Each word's page shows whether you know it, and you can mark a word you already know.
+- A word is learned once you've given its meaning right on two different days without missing it since, and known
+  once two of those right answers are at least two weeks apart. Each word's page shows where you are with it, and you
+  can mark a word you already know.
 
 ### Changed
 
-- Progress counts words known and words being learned by this definition.
+- Progress counts words known, learned and still being learned by these definitions.
 
 ## [2026-11-04]
 

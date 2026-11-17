@@ -44,8 +44,9 @@ numbers = |data|
 					Html.div(
 						"stat-tiles",
 						[
-							tile(data, "Words known", |s| s.known.to_str(), Engine.const("Recalled right on days three weeks apart")),
-							tile(data, "Words learning", |s| s.learning.to_str(), Engine.const("Answered, not yet known")),
+							tile(data, "Words known", |s| s.known.to_str(), Engine.const("Recalled right on days two weeks apart")),
+							tile(data, "Words learned", |s| s.learned.to_str(), Engine.const("Right on two days; known after two weeks")),
+							tile(data, "Words learning", |s| s.learning.to_str(), Engine.const("Answered, not yet learned")),
 							tile(data, "Passages studied", |s| s.studied.to_str(), data.map(|s| "of ${s.passages.to_str()}")),
 							tile(data, "Streak", |s| Model.counted(s.streak, "day", "days"), Engine.const("Days in a row with a review")),
 							tile(data, "Right, last 7 days", |s| s.recent_right, data.map(|s| Model.counted(s.recent_total, "word answer", "word answers"))),
@@ -113,6 +114,7 @@ HardRow : { key : Str, href : Str, name : Str, wrong : Str, attempts : Str }
 
 Summary : {
 	known : U64,
+	learned : U64,
 	learning : U64,
 	studied : U64,
 	passages : U64,
@@ -133,12 +135,14 @@ summary = |model| {
 	words = model.word_cards.values()
 	statuses = Model.known_words(model).values()
 	known = statuses.count_if(|status| status == Known)
+	learned = statuses.count_if(|status| status == Learned)
 	times = Stats.review_times(model.attempts, model.word_reviews)
 	entries = model.entries.values()
 	recent = Stats.recent_words(now, model.attempts, model.word_reviews)
 	{
 		known,
-		learning: statuses.len() - known,
+		learned,
+		learning: statuses.count_if(|status| status == Learning),
 		studied: model.entries.len(),
 		passages: model.works.fold(0, |total, work| total + work.passages.len()),
 		streak: Stats.streak(now, times).to_u64_wrap(),
