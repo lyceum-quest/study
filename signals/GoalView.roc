@@ -98,7 +98,11 @@ goal_data = |model| {
 		width: "${percent.to_str()}%",
 		learned: "${learned.to_str()}%",
 		learned_width: "${learned.to_str()}%",
-		coverage: "You know ${standing.known_tokens.to_str()} of its ${standing.tokens.to_str()} running words, counting names, and have learned the words of ${(standing.learned_tokens - standing.known_tokens).to_str()} more. ${Model.counted(standing.unknown, "word", "words")} in it are still to learn.",
+		coverage: {
+			learned_more = standing.learned_tokens - standing.known_tokens
+			also = if learned_more == 0 "" else ", and have learned the words of ${learned_more.to_str()} more"
+			"You know ${standing.known_tokens.to_str()} of its ${standing.tokens.to_str()} running words, counting names${also}. ${Model.counted(standing.unknown, "word", "words")} in it are still to learn."
+		},
 		needed: if standing.needed == 0 "You've learned enough of its words for ${goal.to_str()}%." else "Learn its ${Model.counted(standing.needed, "most frequent word", "most frequent words")} you haven't learned yet to reach ${goal.to_str()}%.",
 		goal: goal.to_str(),
 		per_day: per_day.to_str(),
