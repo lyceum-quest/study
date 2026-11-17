@@ -5,9 +5,11 @@
 # Local settings (see .env.example)
 .env
 
-# The generated app module and the pinned roc-signals runtime (kai run build-signals)
+# The generated app module and the pinned roc-signals runtime files (kai run build-signals)
 /app.wasm
 /runtime.mjs
+/environment.mjs
+/worker.mjs
 dist/
 preload/
 

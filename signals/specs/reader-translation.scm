@@ -22,7 +22,7 @@
     (expect-attr (test-id "passage-1") "class" "reader-sentence is-current")
     (expect-current-location "/signals/#/demo/read/1.1")
     ; Another passage keeps its translation hidden.
-    (expect-absent (text "It was God"))
+    (expect-absent (text "It was God") :never-drawn)
     (click (role button :name "1:1: hide translation"))
     (expect-absent (text "There was the word"))
     (expect-absent (text "word, was"))

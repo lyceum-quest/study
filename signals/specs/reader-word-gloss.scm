@@ -14,8 +14,8 @@
     (change (test-id "store") "{\"id\":\"draft:8\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
     ; The stored layers are all off: plain Greek, no translations.
     (expect-attr (role button :name "Glosses") "aria-pressed" "false")
-    (expect-absent (text "There was the word"))
-    (expect-absent (text "nom sg m"))
+    (expect-absent (text "There was the word") :never-drawn)
+    (expect-absent (text "nom sg m") :never-drawn)
     (expect-attr (role button :name "λόγος") "class" "reader-token")
     (click (role button :name "λόγος"))
     (expect-attr (text "word") "role" "tooltip")

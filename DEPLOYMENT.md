@@ -1,7 +1,7 @@
 # Lyceum Study deployment
 
 To try a change locally, `kai run build-signals` builds the app (`app.wasm` and
-the pinned `runtime.mjs`, at the repository root) and `kai run fetch-preload`
+the pinned roc-signals runtime files, at the repository root) and `kai run fetch-preload`
 installs the pinned data; any static server on the repository root then serves
 it. The committed `config.json` points "Sign in to sync" at the staging account
 API, `https://lyceum.internal.blu.cx`, which accepts sign-ins only from Lyceum
@@ -33,9 +33,11 @@ site to `dist/aristos/<target>/<version>/` (version
 
 - `index.html`, rewritten to load the assets below;
 - `assets/app.<hash>.wasm` (`roc build --target=wasm32 --opt=size`),
-  `assets/runtime.<hash>.mjs` (the roc-signals runtime pinned in
-  `signals/runtime.lock.json`), `assets/browser-bridge.<hash>.js`,
-  `assets/styles.<hash>.css`, named by the first 16 hex digits of their SHA-256;
+  `assets/browser-bridge.<hash>.js` and `assets/styles.<hash>.css`, named by the
+  first 16 hex digits of their SHA-256, and the roc-signals runtime files pinned
+  in `signals/runtime.lock.json` (`runtime.mjs`, `environment.mjs`,
+  `worker.mjs`) in `assets/roc-signals.<hash>/`, named by `runtime.mjs`'s
+  digest, since `runtime.mjs` loads the other two beside it by name;
 - `config.json`: `{"accountApi": "<origin>"}`, or `{}` for `local`;
 - `preload/`, copied as fetched.
 

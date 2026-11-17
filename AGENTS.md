@@ -6,7 +6,7 @@
 - Read [`DEPLOYMENT.md`](./DEPLOYMENT.md) before changing deployment behavior.
 - Read the relevant plan documents under `docs/plans/` before changing a planned feature.
 - Lyceum Study generates no data. Corpora, passages, and lemmas come from an [Archeion](../archeion) preload release pinned in `preload.lock.json` (see the Data section of `DEPLOYMENT.md`); change the data in Archeion, not here.
-- The Lyceum Study web app is a static page: `index.html` at the repository root loads `browser-bridge.js`, which mounts the app module `app.wasm` with the roc-signals runtime `runtime.mjs`. `kai run build-signals` generates both at the root (about seven minutes; never run two optimized Roc builds at once), and `kai run test-signals` builds the spec runner with the dev backend in seconds, so any static server on the repository root serves the app with its `preload/`. Staging is <https://study.internal.blu.cx>, deployed only on the owner's go (see `DEPLOYMENT.md`). Data changes appear after `kai run fetch-preload`. `aristos.internal.blu.cx` and `aristos.lyceum.quest` are retired.
+- The Lyceum Study web app is a static page: `index.html` at the repository root loads `browser-bridge.js`, which mounts the app module `app.wasm` with the roc-signals runtime `runtime.mjs` (and the `environment.mjs` and `worker.mjs` it loads beside it). `kai run build-signals` generates them at the root (about seven minutes; never run two optimized Roc builds at once), and `kai run test-signals` builds the spec runner with the dev backend in seconds, so any static server on the repository root serves the app with its `preload/`. Staging is <https://study.internal.blu.cx>, deployed only on the owner's go (see `DEPLOYMENT.md`). Data changes appear after `kai run fetch-preload`. `aristos.internal.blu.cx` and `aristos.lyceum.quest` are retired.
 - When a Roc toolchain bug is discovered:
   1. Check whether it has been fixed upstream.
   2. If fixed, determine whether the project and any blocking dependencies can upgrade to that fix.
@@ -17,7 +17,7 @@
 
 - Maintained project code must be Kai or Roc.
 - Lyceum Study is a Roc app on the [roc-signals](https://github.com/lukewilliamboswell/roc-signals) platform (`signals/`, ported from an Elm app that git history keeps). Put pure Roc logic in packages under `packages/`.
-- Keep browser JavaScript in `browser-bridge.js` and the roc-signals runtime only. Use the runtime as released and never edit it. `browser-bridge.js` may mount the app, hand the runtime a `fetch` that adds credentials (so the account API on another origin gets its session cookie; lukewilliamboswell/roc-signals#206, closed in favour of #218), and translate narrow storage messages from the app's `<lyceum-store>` element into IndexedDB operations, but it must not contain corpus parsing, validation, any other fetching, application state, business logic, or tooling. `kai run check-browser-boundary` enforces this.
+- Keep browser JavaScript in `browser-bridge.js` and the roc-signals runtime only. Use the runtime as released and never edit it. `browser-bridge.js` may mount the app and translate narrow storage messages from the app's `<lyceum-store>` element into IndexedDB operations, but it must not contain corpus parsing, validation, fetching, application state, business logic, or tooling. `kai run check-browser-boundary` enforces this.
 - Do not maintain Python or shell source.
 - Implement project tooling and scripts in Roc.
 - Declare tooling dependencies and runnable tasks in `Kaifile.roc`.

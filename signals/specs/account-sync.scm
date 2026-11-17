@@ -13,7 +13,7 @@
     (run-effect 3)
     (expect-text (text "Signed in to Lyceum as ") "Signed in to Lyceum as brandon.")
     (expect-attr (role link :name "brandon") "title" "Signed in as brandon · Not synced yet")
-    (expect-absent (role link :name "Support"))
+    (expect-absent (role link :name "Support") :never-drawn)
     ; The sync state is read once; the next tick syncs.
     (expect-attr (test-id "store") "data-request" "[{\"id\":\"sync-state:8\",\"operation\":\"get\",\"store\":\"metadata\",\"key\":\"sync-state\"}]")
     (change (test-id "store") "{\"id\":\"sync-state:8\",\"ok\":true,\"value\":null,\"now\":1762905600000}")

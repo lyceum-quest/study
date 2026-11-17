@@ -42,11 +42,11 @@ Today := [].{
 			_ => Everything
 		}
 
-	## Everything due or new now, in session order. `last_work` is the work
+	## Everything due or new now, in session order. `latest` is the work
 	## studied most recently. With a `scope`, only that work: its passages, and
 	## the words missed or reviewed in it.
 	plan : I64, I64, [Some(Str), None], [Some(Str), None], List(Work), Dict(Str, Review.Entry), Dict(Str, Words.Card) -> Plan
-	plan = |now, new_per_day, scope, last_work, all_works, entries, all_words| {
+	plan = |now, new_per_day, scope, latest, all_works, entries, all_words| {
 		works = all_works.keep_if(|work| in_scope(scope, work.id))
 		word_cards = all_words.keep_if(|(_, word)| word_in_scope(scope, word))
 		# In key order, as Elm's `Dict.values`.
@@ -57,7 +57,7 @@ Today := [].{
 		)
 		# The daily new limit counts every work, scoped or not.
 		introduced_today = cards.count_if(|entry| entry.introduced_at >= Review.start_of_day(now)).to_i64_wrap()
-		ordered = match last_work {
+		ordered = match latest {
 			Some(id) => works.keep_if(|work| work.id == id).concat(works.drop_if(|work| work.id == id))
 			None => works
 		}

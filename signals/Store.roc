@@ -22,7 +22,7 @@ import json.JsonValue
 ## through this custom element
 ## (https://github.com/lukewilliamboswell/roc-signals/issues/201; roc-issues
 ## archive/RS-002-asynchronous-storage). roc-signals 0.4.0 added typed ports
-## (`Port.call`), which can now replace it (the app is on 0.5.0).
+## (`Port.call`), which can now replace it (the app is on 0.6.0).
 Store := [].{
 
 	Response : { id : Str, ok : Bool, value : JsonValue, now : I64, offset : I64 }

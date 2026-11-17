@@ -16,7 +16,7 @@
     (change (test-id "store") "{\"id\":\"draft:9\",\"ok\":true,\"value\":null,\"now\":1762905600000}")
     (expect-document-title "Demo Work 1:2 · Lyceum Study")
     ; The reader has its own bar instead of the app's header.
-    (expect-absent (label "Lyceum Study library"))
+    (expect-absent (label "Lyceum Study library") :never-drawn)
     (expect-text (text "1:2 · 2 / 3") "1:2 · 2 / 3")
     (expect-attr (test-id "passage-2") "class" "reader-sentence is-current")
     (expect-attr (test-id "passage-1") "class" "reader-sentence")
@@ -26,7 +26,7 @@
     (expect-text (text "beginning") "beginning")
     (expect-text (text "There was the word") "There was the word")
     (expect-text (text "In the beginning") "In the beginning")
-    (expect-absent (text "word, was"))
+    (expect-absent (text "word, was") :never-drawn)
     (expect-attr (role button :name "Glosses") "aria-pressed" "true")
     (expect-attr (role button :name "Morphology") "aria-pressed" "true")
     (expect-attr (role button :name "Translation") "aria-pressed" "true")

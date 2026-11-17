@@ -105,10 +105,10 @@ Sync := [].{
 	page_size : U64
 	page_size = 500
 
-	## One round: send `outgoing`, receive everything newer than the cursor (at
+	## One round: send `records`, receive everything newer than the cursor (at
 	## most a page; `more` asks for another).
 	request : Str, State, List(Outgoing) -> Account.HttpRequest
-	request = |origin, state, outgoing| {
+	request = |origin, state, records| {
 		method: "POST",
 		url: "${origin}/api/sync",
 		headers: [Account.client_header, ("Content-Type", "application/json")],
@@ -118,7 +118,7 @@ Sync := [].{
 				[
 					("app", JsonValue.str("aristos")),
 					("since", JsonValue.int(state.cursor)),
-					("records", JsonValue.array(outgoing.map(encode_outgoing))),
+					("records", JsonValue.array(records.map(encode_outgoing))),
 				],
 			),
 		),
@@ -166,7 +166,7 @@ Sync := [].{
 	decode_state : JsonValue -> Try(State, Str)
 	decode_state = |json| {
 		sent = JsonValue.items(JsonValue.field(json, "sent")?)?.map_try(JsonValue.as_str)?
-		settings = as_object(JsonValue.field(json, "settings")?)?.map_try(
+		stored = as_object(JsonValue.field(json, "settings")?)?.map_try(
 			|(key, setting)| Ok(
 				(
 					key,
@@ -186,7 +186,7 @@ Sync := [].{
 					Err(_) => Bool.True
 				},
 				sent: Set.from_list(sent),
-				settings: Dict.from_list(settings),
+				settings: Dict.from_list(stored),
 			},
 		)
 	}

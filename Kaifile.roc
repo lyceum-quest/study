@@ -27,15 +27,14 @@ kaifile = Std.kaifile([
 			Overlays(["roc"]),
 		],
 	),
-	# The Roc compiler for roc-signals 0.5.0, for the app (signals/), its packages under packages/, and their tests.
-	# The nightly the 0.5.0 release was built and tested with; its native spec runner crashes when built with
-	# nightly-2026-11-10.
+	# The Roc compiler for roc-signals 0.6.0, for the app (signals/), its packages under packages/, and their tests:
+	# the nightly the 0.6.0 release was built and tested with.
 	Environment(
 		"signals",
 		[
 			Tools([
 				"coreutils",
-				"rocpkgs.nightly-2026-11-11-7679cc5",
+				"rocpkgs.nightly-2026-11-15-f25da45",
 			]),
 			Overlays(["roc"]),
 		],

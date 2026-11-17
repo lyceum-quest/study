@@ -32,22 +32,12 @@ View := [].{
 	page : State(Page.S, Model.Model) -> Elem(Page.S)
 	page = |session| {
 		model = session.signal()
-		# Workaround: roc-signals 0.5.0 delivers key events only to elements of
-		# the app, not the document, so the shell takes focus (and keeps it on
-		# clicks inside it) to receive the workspace's shortcuts; text fields
-		# stop their own keys. See
-		# https://github.com/lukewilliamboswell/roc-signals/issues/203 (roc-issues
-		# archive/RS-004-document-key-events), closed in favour of roc-signals#212,
-		# which delivers keys at the document; drop this once the app is on a
-		# release that has it.
 		Engine.element(
 			"div",
 			[
 				Engine.class_s(model.map(|m| "app-shell ${if m.dark "dark-theme" else "light-theme"}${if m.screen == ReaderScreen " is-reading" else ""}")),
-				Engine.attr("tabindex", "-1"),
-				Engine.attr("style", "outline: none"),
-				Engine.ref("shell"),
-				Engine.on("keydown", Page.act_value(session, shortcut)),
+				# The workspace's and reader's shortcuts, except while typing in a field.
+				Engine.on_document_key({ keymap: Engine.const(shortcut_keys) }, session.set_value(|m, key| Update.step(m, |x| shortcut(x, key.key)))),
 			],
 			[
 				# The reader has its own bar.
@@ -82,55 +72,55 @@ View := [].{
 				),
 				Engine.element(
 					"lyceum-store",
-					[Engine.attr("hidden", "true"), Engine.test_id("store"), Engine.attr_s("data-request", model.map(|m| m.outbox)), Engine.on("change", Page.act_value(session, Storage.receive))],
+					[Engine.test_id("store"), Engine.attr_s("data-request", model.map(|m| m.outbox)), Engine.on("change", Page.act_value(session, Storage.receive))],
 					[],
 				),
-				Engine.watch(Engine.const("/preload/corpora.json"), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_manifest(x, Engine.http_text(res))))),
+				Engine.watch(Engine.const("/preload/corpora.json"), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_manifest(x, http_text(res))))),
 				Engine.watch(
 					model.map(|m| { req = Nav.corpus_request(m)
 						{ url: req.conllu, serial: req.serial } }),
 					|req| download(req.url),
-					session.on_result(|m, req, res| Update.step(m, |x| Nav.receive_conllu(x, req.url, Engine.http_text(res)))),
+					session.on_result(|m, req, res| Update.step(m, |x| Nav.receive_conllu(x, req.url, http_text(res)))),
 				),
 				Engine.watch(
 					model.map(|m| { req = Nav.corpus_request(m)
 						{ url: req.units, serial: req.serial } }),
 					|req| download(req.url),
-					session.on_result(|m, req, res| Update.step(m, |x| Nav.receive_units(x, req.url, Engine.http_text(res)))),
+					session.on_result(|m, req, res| Update.step(m, |x| Nav.receive_units(x, req.url, http_text(res)))),
 				),
 				Engine.watch(
 					Engine.const({}),
-					|_| [Popstate, Interval(5000), VisibilityChanges, Focus("shell")],
+					|_| [Engine.raw(Popstate), Engine.raw(Interval(5000)), Engine.raw(VisibilityChanges)],
 					session.on_result(
-						|m, _, res| match res {
+						|m, _, res| match answer(res) {
 							Location(url) => Update.located(m, url)
-							Fired => Update.step(m, |x| Syncing.tick(Storage.refresh_clock(x)))
+							Fired(_) => Update.step(m, |x| Syncing.tick(Storage.refresh_clock(x)))
 							Visible(Bool.True) => Update.step(m, Syncing.start)
 							_ => m
 						},
 					),
 				),
-				Engine.watch(model.map(|m| m.url), |url| if url.serial == 0 [] else if url.push [Push(url.path)] else [Replace(url.path)], session.on_result(|m, _, _| m)),
-				Engine.watch(model.map(Model.document_title), |title| [Title(title)], session.on_result(|m, _, _| m)),
+				Engine.watch(model.map(|m| m.url), |url| if url.serial == 0 [] else if url.push [Engine.command(Push(url.path))] else [Engine.command(Replace(url.path))], Engine.ignore({})),
+				Engine.watch(model.map(Model.document_title), |title| [Engine.command(Title(title))], Engine.ignore({})),
 				# The account API (config.json) once the library has loaded, then its calls.
-				Engine.watch(model.map(|m| m.manifest_loaded), |loaded| if loaded Syncing.requests({ serial: 1, request: Account.config_request }) else [], session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_config(x, res)))),
-				Engine.watch(model.map(|m| m.session_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_session(x, res)))),
-				Engine.watch(model.map(|m| m.sign_out_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.signed_out(x, res)))),
-				Engine.watch(model.map(|m| m.sync_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_sync(x, res)))),
-				Engine.watch(model.map(|m| if m.lemma_index == IndexLoading "/preload/lemmas.json" else ""), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_lemma_index(x, Engine.http_text(res))))),
-				Engine.watch(model.map(|m| if m.changelog == ChangelogLoading "/CHANGELOG.md" else ""), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_changelog(x, Engine.http_text(res))))),
+				Engine.watch(model.map(|m| m.manifest_loaded), |loaded| if loaded Syncing.requests({ serial: 1, request: Account.config_request }) else [], session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_config(x, answer(res))))),
+				Engine.watch(model.map(|m| m.session_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_session(x, answer(res))))),
+				Engine.watch(model.map(|m| m.sign_out_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.signed_out(x, answer(res))))),
+				Engine.watch(model.map(|m| m.sync_call), Syncing.requests, session.on_result(|m, _, res| Update.step(m, |x| Syncing.receive_sync(x, answer(res))))),
+				Engine.watch(model.map(|m| if m.lemma_index == IndexLoading "/preload/lemmas.json" else ""), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_lemma_index(x, http_text(res))))),
+				Engine.watch(model.map(|m| if m.changelog == ChangelogLoading "/CHANGELOG.md" else ""), download, session.on_result(|m, _, res| Update.step(m, |x| Nav.receive_changelog(x, http_text(res))))),
 			],
 		)
 	}
 }
 
 ## A GET of a preload file, revalidated as the Elm app does; "" asks for nothing.
-download : Str -> List(Engine.Request)
+download : Str -> List(Engine.Ask(Engine.Result, []))
 download = |url|
 	if url == "" {
 		[]
 	} else {
-		[Http({ method: "GET", url, headers: [("Cache-Control", "no-cache")], body: "", timeout_ms: 0 })]
+		[Engine.raw(Http({ method: "GET", url, headers: [("Cache-Control", "no-cache")], body: "", timeout_ms: 0, cache: Default, credentials: SameOrigin }))]
 	}
 
 screen_name : Model.Model -> Str
@@ -244,3 +234,26 @@ toggle_theme = |model| {
 nav_button : State(Page.S, Model.Model), Str, (Model.Model -> Bool), (Model.Model -> Model.Model) -> Elem(Page.S)
 nav_button = |session, label, active, change|
 	Html.button(label, [Engine.class_s(session.signal().map(|m| if active(m) "global-nav-button is-active" else "global-nav-button")), Engine.attr("type", "button")], Page.act(session, change))
+
+## The keys `shortcut` handles, heard anywhere but in text fields, which keep
+## their own keys (arrows, j and k, Escape).
+shortcut_keys : Engine.Keymap
+shortcut_keys = Engine.Keymap.keep(["ArrowLeft", "ArrowRight", "j", "k", "Escape"].map(Engine.Chord.plain)).outside_text()
+
+## The answer to a raw request, which never fails as an ask.
+answer : Try(Engine.Result, []) -> Engine.Result
+answer = |res|
+	match res {
+		Ok(found) => found
+	}
+
+## An HTTP answer as the body of a 2xx response, or why there is none.
+http_text : Try(Engine.Result, []) -> Try(Str, Engine.HttpError)
+http_text = |res|
+	match answer(res) {
+		Http(found) if found.status >= 200 and found.status < 300 => Ok(found.body)
+		Http(found) => Err(Status(found.status))
+		Network(message) => Err(Network(message))
+		Timeout => Err(Timeout)
+		_ => Err(Refused)
+	}

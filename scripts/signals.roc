@@ -1,5 +1,5 @@
 app [main!] {
-	pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.28.0/2yhxoR7cZPSYbyUzPWULFw8AA6QEcdsgFNRmzu7pZbst.tar.zst",
+	pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.28.1/7brgwR8YUqfeGrkdfF1V4GPPN7DnP7ftqub9KcrTEZtr.tar.zst",
 	http: "https://github.com/roc-lang/http/releases/download/1.0.0/6ZUwqYhCS8PU9Mo6MF7oV82ET2o7KYb57CLKDq4cq4sS.tar.zst",
 	json: "../packages/json/main.roc",
 }
@@ -15,9 +15,10 @@ import json.JsonValue
 # signals.roc build|specs
 #
 # build: the app (signals/) as the files index.html loads beside browser-bridge.js and styles.css: its wasm32 module
-# (app.wasm) and the roc-signals runtime pinned by URL and SHA-256 in signals/runtime.lock.json (runtime.mjs,
-# downloaded once, checked every build, never edited), both generated at the repository root, which serves the app
-# with preload/ and fonts/. The release build bundles the same two files.
+# (app.wasm) and the roc-signals runtime files pinned by URL and SHA-256 in signals/runtime.lock.json (runtime.mjs,
+# environment.mjs and worker.mjs: downloaded once, checked every build, never edited), all generated at the repository
+# root, which serves the app
+# with preload/ and fonts/. The release build bundles the same files.
 #
 # specs: builds the app's native spec runner (dist/signals-specs/review-specs) and runs signals/specs/*.scm with it.
 
@@ -34,13 +35,21 @@ main! = |args| {
 build! = |{}| {
 	roc!(["build", "--target=wasm32", "--opt=size", "signals/main.roc", "--output=app.wasm"])?
 	runtime!({})?
-	Stdout.line!("built app.wasm and runtime.mjs")
+	Stdout.line!("built app.wasm and the roc-signals runtime files")
 }
 
-## The pinned runtime.mjs, downloaded unless the copy there already matches the pin.
+## The pinned runtime files (runtime.mjs and the environment.mjs and worker.mjs it loads beside it), each downloaded
+## unless the copy there already matches its pin.
 runtime! = |{}| {
-	{ url, pinned } = pin(Path.read_utf8!(Path.unix("signals/runtime.lock.json"))?) ? |message| Lock("signals/runtime.lock.json: ${message}")
-	target = Path.unix("runtime.mjs")
+	files = pins(Path.read_utf8!(Path.unix("signals/runtime.lock.json"))?) ? |message| Lock("signals/runtime.lock.json: ${message}")
+	for file in files {
+		fetch!(file)?
+	}
+	Ok({})
+}
+
+fetch! = |{ name, url, pinned }| {
+	target = Path.unix(name)
 	present = if Path.exists!(target)? sha256(Path.read_bytes!(target)?) == pinned else Bool.False
 	if present {
 		Ok({})
@@ -58,15 +67,17 @@ runtime! = |{}| {
 	}
 }
 
-pin : Str -> Try({ url : Str, pinned : Str }, Str)
-pin = |text| {
+pins : Str -> Try(List({ name : Str, url : Str, pinned : Str }), Str)
+pins = |text| {
 	lock = JsonValue.decode(text)?
-	Ok({ url: JsonValue.as_str(JsonValue.field(lock, "url")?)?, pinned: JsonValue.as_str(JsonValue.field(lock, "sha256")?)? })
+	JsonValue.items(JsonValue.field(lock, "files")?)?.map_try(
+		|file| Ok({ name: JsonValue.as_str(JsonValue.field(file, "name")?)?, url: JsonValue.as_str(JsonValue.field(file, "url")?)?, pinned: JsonValue.as_str(JsonValue.field(file, "sha256")?)? }),
+	)
 }
 
 specs! = |{}| {
 	Path.create_all!(Path.unix("dist/signals-specs"))?
-	# With the dev backend, as roc-signals 0.5.0's own `signals.roc test` builds it: seconds rather than minutes.
+	# With the dev backend, as roc-signals' own `signals.roc test` builds it: seconds rather than minutes.
 	roc!(["build", "--target=x64musl", "--opt=dev", "signals/main.roc", "--output=${runner}"])?
 	found = Path.list!(Path.unix("signals/specs"))?
 		.map(|path| path.display())

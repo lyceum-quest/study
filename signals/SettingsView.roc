@@ -176,15 +176,13 @@ progress = |session| {
 				[Engine.class("new-per-day")],
 				[
 					Engine.element("span", [], [Engine.text("New passages per day")]),
-					Engine.element(
-						"select",
-						[
-							Html.aria_label("New passages per day"),
-							Engine.attr_s("value", model.map(|m| m.new_per_day.to_str())),
-							Engine.on("change", Page.act_value(session, Nav.set_new_per_day)),
-						],
-						[Html.option("3", "3"), Html.option("5", "5"), Html.option("10", "10"), Html.option("15", "15"), Html.option("20", "20"), Html.option("30", "30")],
-					),
+						Page.select(
+							"New passages per day",
+							model.map(|m| m.new_per_day.to_str()),
+							Engine.const(["3", "5", "10", "15", "20", "30"].map(|n| (n, n))),
+							[],
+							Page.chose(session, Nav.set_new_per_day),
+						),
 					Engine.element("span", [Engine.class("muted")], [Engine.text("Reviews that are due are never capped.")]),
 				],
 			),

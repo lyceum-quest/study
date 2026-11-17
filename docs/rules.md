@@ -11,7 +11,7 @@
 ## Implementation
 
 - Favor the smallest change that implements the requested behavior and respects the project boundaries in [`AGENTS.md`](../AGENTS.md).
-- Keep application state, corpus parsing, validation, fetching, and business logic in Roc (the app in `signals/`, pure logic in packages under `packages/`). Keep project tooling in Roc. Restrict `browser-bridge.js` to mounting the app (with its credentials fetch) and narrow IndexedDB translation, and use the roc-signals runtime as released.
+- Keep application state, corpus parsing, validation, fetching, and business logic in Roc (the app in `signals/`, pure logic in packages under `packages/`). Keep project tooling in Roc. Restrict `browser-bridge.js` to mounting the app and narrow IndexedDB translation, and use the roc-signals runtime as released.
 - Keep pure data transformations separate from side effects.
 - Do not edit generated output in `.kai/`, `app.wasm`, `runtime.mjs`, `dist/`, or `preload/`; regenerate it through the corresponding Kai task or workflow.
 - Use Roc's `\\` syntax for static multiline strings. Use `Str.join_with` only when interpolation or composition is required.

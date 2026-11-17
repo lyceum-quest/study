@@ -8,7 +8,7 @@
     (expect-text (role heading :name "Not yet released") "Not yet released")
     (expect-text (role heading :name "Added") "Added")
     (expect-text (text "A new text.") "A new text.")
-    (expect-absent (text "Refactoring."))
+    (expect-absent (text "Refactoring.") :never-drawn)
     (expect-text (role heading :name "2026-11-04") "2026-11-04")
   )
 )

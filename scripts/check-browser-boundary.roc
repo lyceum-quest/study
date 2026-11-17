@@ -9,10 +9,10 @@ import pf.Stdout
 # Raised from 4096 when the bridge gained the roc-signals storage element (<lyceum-store>).
 max_bridge_bytes = 4608
 
-# The roc-signals runtime is the only other JavaScript the page loads. It is never kept in the repository: the
-# build-signals task downloads the release signals/runtime.lock.json pins to the repository root and checks its
-# SHA-256, and a built copy must still match that pin.
-runtime_path = "runtime.mjs"
+# The roc-signals runtime files (runtime.mjs and the environment.mjs and worker.mjs it loads beside it) are the only
+# other JavaScript the page loads. They are never kept in the repository: the build-signals task downloads the files
+# signals/runtime.lock.json pins to the repository root and checks their SHA-256, and built copies must still match
+# those pins.
 
 main! = |_args| {
 	bridge = Path.read_utf8!("browser-bridge.js")?
@@ -39,27 +39,36 @@ main! = |_args| {
 		fail!("maintained JavaScript must be exactly browser-bridge.js; found ${Str.inspect(existing)}")
 	} else if List.len(Str.to_utf8(bridge)) > max_bridge_bytes {
 		fail!("browser-bridge.js exceeds the explicit ${max_bridge_bytes.to_str()}-byte architecture limit")
-	} else if List.any(forbidden_bridge_terms, |term| Str.contains(Str.replace_each(bridge, credentials_fetch, ""), term)) {
+	} else if List.any(forbidden_bridge_terms, |term| Str.contains(bridge, term)) {
 		fail!("browser-bridge.js contains an operation reserved for Roc")
 	} else if Str.contains(index, "<script>") or Str.contains(index, "<script\n") {
 		fail!("index.html contains inline JavaScript")
 	} else if List.len(Str.split_on(index, "<script")) != 2 or !Str.contains(index, "<script src=\"/browser-bridge.js\"></script>") or !Str.contains(index, "data-runtime=\"/runtime.mjs\"") {
 		fail!("index.html must load only the browser bridge, which mounts the pinned roc-signals runtime")
 	} else if !runtime_pinned {
-		fail!("${runtime_path} is not the roc-signals runtime signals/runtime.lock.json pins; run the Kai build-signals task")
+		fail!("the roc-signals runtime files are not the ones signals/runtime.lock.json pins; run the Kai build-signals task")
 	} else {
 		Stdout.line!("browser boundary OK: one ${List.len(Str.to_utf8(bridge)).to_str()}-byte bridge")
 	}
 }
 
-runtime_matches_pin! = |{}|
-	if Path.exists!(Path.utf8(runtime_path))? {
-		lock : { release : Str, url : Str, sha256 : Str }
-		lock = Json.parse(Path.read_utf8!("signals/runtime.lock.json")?)?
-		sum = Cmd.new("sha256sum").args(["--", OsStr.from_str(runtime_path)]).exec_output!()?
-		Ok(List.first(Str.split_on(sum.stdout_utf8, " ")) == Ok(lock.sha256))
-	} else {
-		Ok(Bool.True)
+runtime_matches_pin! = |{}| {
+	lock : { release : Str, files : List({ name : Str, url : Str, sha256 : Str }) }
+	lock = Json.parse(Path.read_utf8!("signals/runtime.lock.json")?)?
+	files_match!(lock.files)
+}
+
+# Each pinned file present at the repository root matches its pin (absent ones are fetched by build-signals).
+files_match! = |files|
+	match files {
+		[] => Ok(Bool.True)
+		[file, .. as rest] =>
+			if Path.exists!(Path.utf8(file.name))? {
+				sum = Cmd.new("sha256sum").args(["--", OsStr.from_str(file.name)]).exec_output!()?
+				if List.first(Str.split_on(sum.stdout_utf8, " ")) == Ok(file.sha256) files_match!(rest) else Ok(Bool.False)
+			} else {
+				files_match!(rest)
+			}
 	}
 
 existing_files! = |paths|
@@ -74,12 +83,6 @@ existing_files! = |paths|
 			}
 		}
 	}
-
-## The one fetch the bridge may contain: the fetch it gives the roc-signals
-## runtime, which only adds credentials for the account API (the runtime cannot
-## ask for them; roc-signals#206, closed in favour of #218). It makes no request
-## of its own.
-credentials_fetch = "const withCredentials = (url, init) => fetch(url, Object.assign({}, init, { credentials: \"include\" }));"
 
 forbidden_bridge_terms = [
 	"fetch(",

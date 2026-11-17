@@ -8,8 +8,9 @@ import AristosSite
 
 # build-release production|staging|local
 # Writes a self-contained static site to dist/aristos/<target>/<version>/ and its name to
-# dist/aristos/<target>/latest. The app module and roc-signals runtime (built by the build-signals task), bridge, and
-# stylesheet get content-hashed names under assets/
+# dist/aristos/<target>/latest. The app module (built by the build-signals task), bridge, and stylesheet get
+# content-hashed names under assets/, and the roc-signals runtime files (fetched by build-signals) go together into
+# assets/roc-signals.<hash>/, as runtime.mjs loads environment.mjs and worker.mjs beside it by name
 # (served with a long immutable cache); index.html, config.json, preload/, and fonts/ keep fixed names (served no-cache,
 # revalidated by ETag). config.json names the target's Lyceum account API.
 main! = |args| {
@@ -19,7 +20,7 @@ main! = |args| {
 	}?
 	api = AristosSite.account_api(target)?
 	_ = require(Path.exists!(Path.utf8("preload/corpora.json"))?, "preload/corpora.json is missing; run the Kai preload task first")?
-	_ = require(Path.exists!(Path.utf8("app.wasm"))? and Path.exists!(Path.utf8("runtime.mjs"))?, "app.wasm or runtime.mjs is missing; run the Kai build-signals task first")?
+	_ = require(Path.exists!(Path.utf8("app.wasm"))? and Path.exists!(Path.utf8("runtime.mjs"))? and Path.exists!(Path.utf8("environment.mjs"))? and Path.exists!(Path.utf8("worker.mjs"))?, "app.wasm or a roc-signals runtime file is missing; run the Kai build-signals task first")?
 	version = version!({})?
 	_ = require(AristosSite.valid_version(version), "Unexpected release name ${version}")?
 	root = AristosSite.dist(target)
@@ -30,11 +31,10 @@ main! = |args| {
 	Path.create_all!(Path.utf8("${partial}/assets"))?
 
 	_ = copy!("app.wasm", "${partial}/assets/app.wasm")?
-	_ = copy!("runtime.mjs", "${partial}/assets/runtime.mjs")?
 	_ = copy!("browser-bridge.js", "${partial}/assets/browser-bridge.js")?
 	_ = copy!("styles.css", "${partial}/assets/styles.css")?
 	app_module = hashed!(partial, "app", "wasm")?
-	runtime = hashed!(partial, "runtime", "mjs")?
+	runtime = runtime!(partial)?
 	bridge = hashed!(partial, "browser-bridge", "js")?
 	styles = hashed!(partial, "styles", "css")?
 
@@ -106,4 +106,19 @@ version! = |{}| {
 	commit = run!("git", ["rev-parse", "--short=7", "HEAD"])?
 	changes = run!("git", ["status", "--porcelain"])?
 	Ok("${time}-${commit}${if changes == "" "" else "-dirty"}")
+}
+
+# Copies the runtime files into <dir>/assets/roc-signals.<first 16 hex digits of runtime.mjs's SHA-256>/ and returns
+# the path of runtime.mjs there, which index.html references. runtime.mjs differs between roc-signals releases, so the
+# directory's name changes whenever any of the files does.
+runtime! = |dir| {
+	sum = run!("sha256sum", ["runtime.mjs"])?
+	digest = Str.from_utf8(List.take_first(Str.to_utf8(sum), 16)) ?? ""
+	_ = require(List.len(Str.to_utf8(digest)) == 16, "sha256sum gave no digest for runtime.mjs")?
+	folder = "assets/roc-signals.${digest}"
+	Path.create_all!(Path.utf8("${dir}/${folder}"))?
+	_ = copy!("runtime.mjs", "${dir}/${folder}/runtime.mjs")?
+	_ = copy!("environment.mjs", "${dir}/${folder}/environment.mjs")?
+	_ = copy!("worker.mjs", "${dir}/${folder}/worker.mjs")?
+	Ok("${folder}/runtime.mjs")
 }

@@ -19,11 +19,12 @@ import Workspace
 ## study tools, the checkpoint's grading, past attempts, the ends of a queue
 ## or a work, and the footer that moves between them.
 ##
-## Workaround: roc-signals 0.5.0 cannot measure layout, so the word popup
-## opens in its natural place below the word (the Elm app measures it and
+## Workaround: roc-signals before 0.6.0 could not measure layout, so the word
+## popup opens in its natural place below the word (the Elm app measures it and
 ## moves it above or sideways to fit); see
 ## https://github.com/lukewilliamboswell/roc-signals/issues/204, closed in
 ## favour of #211, #213 and #214 (roc-issues archive/RS-005-layout-measurement).
+## 0.6.0 has layout observations (`on_size`, `on_seen`) to place it with.
 WorkspaceView := [].{
 
 	## One word of the passage to answer. `greek` carries the punctuation that
@@ -109,10 +110,10 @@ WorkspaceView := [].{
 							Engine.element(
 								"select",
 								[
-									Engine.attr_s("value", row.field(|level| level.current)),
+									Engine.prop_s(Engine.Prop.value, row.field(|level| level.current)),
 									Engine.on("change", session.lift_row().set_value_by(row.field(|level| level.prefix), |m, prefix, value| Update.step(m, |x| Workspace.jump_to_citation(x, "${prefix}${value}")))),
 								],
-								[Engine.each(row.field(|level| level.choices), |choice| choice, |option| Engine.element("option", [Engine.attr_s("value", option.key())], [Engine.text_s(option.key())]))],
+								[Engine.each(row.field(|level| level.choices), |choice| choice, |option| Engine.element("option", [Engine.prop_s(Engine.Prop.value, option.key())], [Engine.text_s(option.key())]))],
 							),
 						],
 					),
@@ -124,7 +125,6 @@ WorkspaceView := [].{
 						Engine.attr_s("placeholder", model.map(|m| if Model.current_label(m).contains(":") "Go to 1:2" else "Go to 1.2")),
 						Html.aria_label("Go to citation"),
 						Engine.on("change", Page.act_value(session, Workspace.go_to_citation)),
-						Engine.on("keydown", session.update(|m| m)),
 					],
 					[],
 				),
@@ -427,7 +427,7 @@ study_cell = |session, row| {
 					row.field(|cell| "Your gloss for ${cell.form}"),
 					"text",
 					row.field(|cell| cell.guess),
-					[Engine.class("cell-input"), Engine.attr("autocomplete", "off"), Engine.attr("autocapitalize", "off"), Engine.on("keydown", rows.update(|m| m))],
+					[Engine.class("cell-input"), Engine.attr("autocomplete", "off"), Engine.attr("autocapitalize", "off")],
 					rows.set_value_by(id, |m, token, gloss| Update.step(m, |x| Workspace.set_gloss(x, token, gloss))),
 				),
 				|| Engine.text(""),
@@ -546,7 +546,7 @@ gloss_field = |rows, row, heading| {
 				row.field(|cell| "Your gloss for ${cell.form}"),
 				"text",
 				row.field(|cell| cell.guess),
-				[Engine.class("gloss-input"), Engine.attr("placeholder", "Your gloss"), Engine.on("keydown", rows.update(|m| m))],
+				[Engine.class("gloss-input"), Engine.attr("placeholder", "Your gloss")],
 				rows.set_value_by(id, |m, token, gloss| Update.step(m, |x| Workspace.set_gloss(x, token, gloss))),
 			),
 			Engine.when(
@@ -578,7 +578,7 @@ translation_field = |state, model, module_id| {
 			Html.textarea(
 				Engine.const(name),
 				model.map(|m| if (literal) m.study.literal else m.study.prose),
-				[Engine.attr("rows", "3"), Engine.attr("placeholder", "Your ${name.with_ascii_lowercased()}"), Engine.on("keydown", state.update(|m| m))],
+				[Engine.attr("rows", "3"), Engine.attr("placeholder", "Your ${name.with_ascii_lowercased()}")],
 				state.set_value(|m, text| Update.step(m, |x| if (literal) Workspace.set_literal(x, text) else Workspace.set_prose(x, text))),
 			),
 			Engine.when(

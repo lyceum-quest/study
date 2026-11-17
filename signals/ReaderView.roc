@@ -11,12 +11,12 @@ import WorkspaceView
 ## the work with its glosses, morphology and translation, or the Greek alone
 ## with a word's gloss on tap.
 ##
-## Workaround: roc-signals 0.5.0 cannot measure layout or scroll
+## Workaround: roc-signals before 0.6.0 could not measure layout or scroll
 ## (https://github.com/lukewilliamboswell/roc-signals/issues/204, closed in
 ## favour of #211, #213 and #214; roc-issues archive/RS-005-layout-measurement),
 ## so where the Elm app scrolls the current passage to the top of the reader,
-## this one focuses it, which scrolls it into view. Scroll it like the Elm app
-## once the app is on a release that has those.
+## this one focuses it, which scrolls it into view. 0.6.0 has `ScrollIntoView`
+## and layout observations; scroll it like the Elm app with them.
 ReaderView := [].{
 
 	## `toggle_theme` and `theme_action` are the header's theme switch, which the reader's bar repeats.
@@ -73,9 +73,7 @@ ReaderView := [].{
 				),
 				# Brings the current passage into view when the reader opens and
 				# whenever another passage becomes current (see the note above).
-				Engine.watch(model.map(|m| m.sentence_index), |_| [Focus("reader-current")], Engine.ignore({})),
-				# The focused passage goes with the reader; give the keys back to the shell (see View.page).
-				Engine.on_cleanup("reader-focus", Engine.const({}), |_| [Focus("shell")]),
+				Engine.watch(model.map(|m| m.sentence_index), |_| [Engine.command(Focus("reader-current"))], Engine.ignore({})),
 			],
 		)
 	}

@@ -35,7 +35,7 @@ JsonValue := [
 
 	field : JsonValue, Str -> Try(JsonValue, Str)
 	field = |json, name| match json {
-		Object(fields) => match fields.keep_if(|(k, _)| k == name) {
+		Object(pairs) => match pairs.keep_if(|(k, _)| k == name) {
 			[(_, v), ..] => Ok(v)
 			[] => Err("missing field \"${name}\"")
 		}
@@ -44,7 +44,7 @@ JsonValue := [
 
 	fields : JsonValue -> List((Str, JsonValue))
 	fields = |json| match json {
-		Object(items) => items
+		Object(pairs) => pairs
 		_ => []
 	}
 

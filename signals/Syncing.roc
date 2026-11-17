@@ -115,13 +115,14 @@ Syncing := [].{
 	}
 
 	## The Engine request for a call (none before its first serial).
-	requests : Model.Call -> List(Engine.Request)
+	requests : Model.Call -> List(Engine.Ask(Engine.Result, []))
 	requests = |found|
 		if found.serial == 0 {
 			[]
 		} else {
 			request = found.request
-			[Http({ method: request.method, url: request.url, headers: request.headers, body: request.body, timeout_ms: request.timeout_ms.to_u32_wrap() })]
+			# With the session cookie, which the account API on another origin needs.
+			[Engine.raw(Http({ method: method(request.method), url: request.url, headers: request.headers, body: request.body, timeout_ms: request.timeout_ms.to_u32_wrap(), cache: Default, credentials: Include }))]
 		}
 }
 
@@ -145,3 +146,7 @@ response = |res|
 		Timeout => Err(Timeout)
 		_ => Err(NetworkError)
 	}
+
+## The account API's methods, as the Engine names them.
+method : Str -> Engine.Method
+method = |name| if name == "POST" "POST" else "GET"

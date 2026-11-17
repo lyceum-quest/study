@@ -109,9 +109,5 @@
 
   const node = document.getElementById("app");
 
-  // The runtime's fetch, with credentials for the account API (roc-signals#206,
-  // closed in favour of #218, which adds a credentials field to requests).
-  const withCredentials = (url, init) => fetch(url, Object.assign({}, init, { credentials: "include" }));
-
-  import(node.dataset.runtime).then((runtime) => runtime.mountRocEngineApp({ wasmUrl: node.dataset.wasm, root: node, fetch: withCredentials, onFault: console.error })).catch(console.error);
+  import(node.dataset.runtime).then((runtime) => runtime.mountRocEngineApp({ wasmUrl: node.dataset.wasm, root: node, onFault: console.error })).catch(console.error);
 })();

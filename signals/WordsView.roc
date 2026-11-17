@@ -100,7 +100,7 @@ WordsView := [].{
 								context_text_of(model, |found| "Meaning of ${found.form}"),
 								"text",
 								model.map(|m| m.word_answer.guess),
-								[Engine.class("gloss-input word-review-input"), Engine.attr("placeholder", "What does it mean here?"), Engine.on("keydown", session.update(|m| m))],
+								[Engine.class("gloss-input word-review-input"), Engine.attr("placeholder", "What does it mean here?")],
 								Page.act_value(session, |m, guess| { ..m, word_answer: { ..m.word_answer, guess } }),
 							),
 							Engine.when(

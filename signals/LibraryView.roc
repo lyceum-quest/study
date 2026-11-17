@@ -72,13 +72,13 @@ LibraryView := [].{
 									[Engine.class("library-search"), Engine.attr("placeholder", "Search title, author, or edition")],
 									Page.act_value(session, |m, search| { ..m, search }),
 								),
-								Html.select(
-									Engine.const("Sort the library"),
-									model.map(|m| m.sort),
-									[Engine.class("library-sort")],
-									[Html.option("recent", "Recently studied"), Html.option("title", "Title"), Html.option("short", "Shortest first")],
-									Page.act_value(session, |m, sort| { ..m, sort }),
-								),
+									Page.select(
+										"Sort the library",
+										model.map(|m| m.sort),
+										Engine.const([("recent", "Recently studied"), ("title", "Title"), ("short", "Shortest first")]),
+										[Engine.class("library-sort")],
+										Page.chose(session, |m, sort| { ..m, sort }),
+									),
 							],
 						),
 						Engine.switch(
@@ -109,16 +109,13 @@ LibraryView := [].{
 					[Engine.class("today-scope")],
 					[
 						Engine.element("span", [], [Engine.text("Studying")]),
-						Html.select(
-							Engine.const("Works to study"),
-							model.map(|m| Model.with_default(m.today_scope, all_works)),
-							[],
-							[
-								Html.option(all_works, "All works"),
-								Engine.each(model.map(|m| working_on(m).map(|work| { id: work.id, title: work.title })), |work| work.id, |row| Engine.element("option", [Engine.attr_s("value", row.key())], [Engine.text_s(row.field(|work| work.title))])),
-							],
-							Page.act_value(session, |m, work| Nav.set_today_scope(m, if work == all_works "" else work)),
-						),
+							Page.select(
+								"Works to study",
+								model.map(|m| Model.with_default(m.today_scope, all_works)),
+								model.map(|m| [(all_works, "All works")].concat(working_on(m).map(|work| (work.id, work.title)))),
+								[],
+								Page.chose(session, |m, work| Nav.set_today_scope(m, if work == all_works "" else work)),
+							),
 					],
 				),
 			],
@@ -427,10 +424,11 @@ next_due : Model.Model, Today.Mode -> [Some((Today.Item, I64)), None]
 next_due = |model, mode| Today.upcoming(model.clock, mode, model.today_scope, model.entries, model.word_cards)
 
 ## The "All works" choice of the Today scope (the Elm app's empty value).
-## Workaround: roc-signals 0.5.0 removes an attribute set to "", so an
-## option cannot have the value "" (it would fall back to its label); see
-## https://github.com/lukewilliamboswell/roc-signals/issues/205 (open; roc-issues
-## archive/RS-006-empty-attribute-values).
+## Workaround: roc-signals before 0.6.0 removed an attribute set to "", so an
+## option could not have the value "" (it would fall back to its label); see
+## https://github.com/lukewilliamboswell/roc-signals/issues/205 (closed; roc-issues
+## archive/RS-006-empty-attribute-values). 0.6.0 keeps empty values, so the
+## choice can become "" again.
 ## A work id is never "*".
 all_works : Str
 all_works = "*"
